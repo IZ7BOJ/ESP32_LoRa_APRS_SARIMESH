@@ -25,6 +25,17 @@ void send_dashboard_values_html () {
   String LoRa_ENLStr=TEMP6;
   // String device_date=UTC.dateTime(now(), F("l, d/n/Y H:i:s.v T")) ;
   String device_date=UTC.dateTime(ezt::now(), F("d/n/Y H:i:s T")) ;
+  if(GPS_TimeDate != "" ) device_date = GPS_TimeDate ;  // if we have a GPS originated timedate just display it
+  if(CPU_TYPE == "TTGO"){                               // TTGO must use gps timedate in any case
+    if(GPS_TimeDate == "" ) {
+      device_date = String("Not Jet Available");
+      }
+    else{  
+      device_date = GPS_TimeDate ;
+    };
+  }; 
+  
+
   if(device_date.indexOf("1970") != -1) { device_date="Not_Jet_Available";  };
   // gps.satellites.value(), gps.satellites.isValid()
   String gps_pos="Not_Available";

@@ -25,6 +25,10 @@ extern volatile byte EncapType ;
 extern volatile byte PayloadStyle ;
 extern volatile byte RepeaterOperation ;
 extern volatile byte LoraSync ;
+extern volatile byte LocationCompression ;
+extern volatile byte BlackList ;
+
+extern volatile uint8_t AgileBeaconing ;
 
 void WriteConfig(void) ;
 
@@ -78,6 +82,49 @@ Repeater operation Configuration:<br>
 </select>
 </td></tr>
 </table>
+
+
+<hr>
+TX Location Compression Configuration:<br>
+
+<table border="0"  cellspacing="0" cellpadding="3" style="width:310px" >
+<tr><td align="right">LocationCompression:</td><td> 
+<select  id="LocationCompression" name="LocationCompression">
+  <option value="0">Disable</option> 
+  <option value="1">Enable</option>
+</select>
+</td></tr>
+</table>
+
+<hr>
+TX Agile Beaconing Configuration:<br>
+
+<table border="0"  cellspacing="0" cellpadding="3" style="width:310px" >
+<tr><td align="right">AgileBeconing:</td><td> 
+<select  id="AgileBeaconing" name="AgileBeaconing">
+  <option value="0">Disable</option> 
+  <option value="1">EventMode</option>
+  <option value="2">MappingModeUltraFine</option>
+  <option value="3">MappingModeDetailed</option>
+  <option value="4">MappingModeCourse</option>
+  <option value="5">MappingModeUltraCourse</option>
+</select>
+</td></tr>
+</table>
+
+<hr>
+Beacon Blacklist Configuration:<br>
+
+<table border="0"  cellspacing="0" cellpadding="3" style="width:310px" >
+<tr><td align="right">Black list :</td><td> 
+<select  id="BlackList" name="BlackList">
+  <option value="0">Disable</option> 
+  <option value="1">Enable</option>
+</select>
+</td></tr>
+</table>
+
+
 
 <hr>
 LoraSync word Configuration:<br>

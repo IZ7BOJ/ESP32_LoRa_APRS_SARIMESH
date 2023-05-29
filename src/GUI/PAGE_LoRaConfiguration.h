@@ -142,8 +142,12 @@ LoRa APRS Main Configuration:<br>
 </select>
 
 </td></tr>
+<tr><td align="right">LoraFreqCorr(ppm * 10):</td><td><input type="text" id="LoraFreqCorr" name="LoraFreqCorr" value=""> </td></tr>
+<tr><td align="right">LoRa_FreqJitter(ppm)now:</td><td><span id="x_LoRa_FreqJitter"></span></td></tr>
 
-<tr><td align="right">LoraFreqCorr(ppm):</td><td><input type="text" id="LoraFreqCorr" name="LoraFreqCorr" value=""> </td></tr>
+<!--
+<tr><td align="right">LoRa_FreqJitter(ppm)now:</td><td><input type="text" id="LoRa_FreqJitter" name="LoRa_FreqJitter" disabled value=""> </td></tr>
+-->
 
 
 <tr><td colspan="2"><hr></span></td></tr>
@@ -268,7 +272,6 @@ LoRa APRS Main Configuration:<br>
 <tr><td align="right">LoraPreambleLen:</td><td>
 <!-- <input type="text" id="LoraPreambleLen" name="LoraPreambleLen" value=""> -->
 <select  id="LoraPreambleLen" name="LoraPreambleLen">
-  <option value="4">4</option>
   <option value="6">6</option>
   <option value="8">8</option>
   <option value="10">10</option>  
@@ -314,7 +317,7 @@ LoRa APRS Main Configuration:<br>
 
 </td></tr>
 
-<tr><td align="right">LoraFreqCorr(ppm):</td><td><input type="text" id="LoraFreqCorr" name="LoraFreqCorr" value=""> </td></tr>
+<tr><td align="right">LoraFreqCorr(ppm * 10):</td><td><input type="text" id="LoraFreqCorr" name="LoraFreqCorr" value=""> </td></tr>
 <tr><td align="right">LoRa_FreqJitter(ppm)now:</td><td><span id="x_LoRa_FreqJitter"></span></td></tr>
 
 <!--

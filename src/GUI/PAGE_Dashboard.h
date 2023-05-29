@@ -58,6 +58,10 @@ extern int wifi_unavailable ;
 extern int mqtt_unavailable ;
 extern volatile bool aprsis_available ;
 extern bool volatile syslog_available  ;
+extern uint32_t last_aux_time ;                   // to implement one second events
+extern String GPS_TimeDate ;
+
+
 
 void WriteConfig(void) ;
 
