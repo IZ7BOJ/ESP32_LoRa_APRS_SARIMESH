@@ -1,4 +1,4 @@
-#News in 4.1.0 Branch
+# News in 4.1.0 Branch
 - Compressed Position Format
 - Optimization of telemetries length
 - Agile Beaconing
@@ -7,7 +7,7 @@
 - RA-01S LoRa module now supported
 - Lora TTGO HW now supported
 
-#Introduction by Michele I8FUC
+# Introduction by Michele I8FUC
 This SW package is the porting under PlatformIO of an original work developed under arduino as part of an experimentation promoted by the Radio Amateur Group of the Penisola Sorrentina... ( near Napoli , Southern Italy )
 
 The initial target of this activity was to stimulate local OMs to jump over the new technologies  that represent the "radio Amateur toolset of the 2000 years"...  
