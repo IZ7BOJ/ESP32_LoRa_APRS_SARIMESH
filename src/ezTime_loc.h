@@ -15,7 +15,7 @@ extern volatile int32_t time_jitter ;
 extern volatile bool has_GPS ;
 extern volatile bool has_DS3231 ;
 extern String ntpServer;
-extern float homelat , homelon ;
+extern double homelat , homelon ;
 extern bool standalone ;  // 1--> allows to start without WiFi/NTP immediately; will try to use GPS or RTC disciplined operation
 extern volatile bool no_gps  ;     // 1--> force NTP or RTC disciplined operation 
 extern volatile int op_status  ;  // operation status: 0=not_available 1=RTC_disciplined 2=NTP_disciplined  3=GPS_disciplined
@@ -27,6 +27,8 @@ extern volatile time_t NTP_sync_time ;           // patched ezTime to support NT
 extern volatile time_t NTP_last_sync_time ;
 extern volatile time_t GPS_sync_time ;           // patched ezTime to support GPS sync 
 extern volatile time_t GPS_last_sync_time ;
+extern uint32_t last_aux_time;                   // to implement one second events
+
 
 //#define WIFI_UPSTREAM
 #ifndef WIFI_UPSTREAM

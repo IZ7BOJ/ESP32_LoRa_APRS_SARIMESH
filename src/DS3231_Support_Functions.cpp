@@ -273,11 +273,11 @@ void ClockManager( void * pvParameters ){      //ClockManager: task to keep upda
 
   if(NTP_status) {NTP_time_status = timeSet;} else {NTP_time_status = timeNotSet ;};
 #endif
+   if( ! last_aux_time )   last_aux_time=now();
 
-   //*************************  Set real time based on time reference availability or RTC content as a default 
-   debugA("Set real time based on time reference availability at %d/%d  %s\r",now(),millis(),(UTC.dateTime(now(), "d/n/Y H:i:s.v T")).c_str());
-   last_aux_time=now();
-   debugA("GPS_time_status=%d - GPS_last_sync_time=%d - has_GPS = %d\r",GPS_time_status, GPS_last_sync_time, has_GPS );  // time & millis of last GPS_PPS rising edge
+//*************************  Set real time based on time reference availability or RTC content as a default 
+   debugA("Set real time based on time reference availability at %d/%d %s\r",last_aux_time,millis(), (UTC.dateTime(last_aux_time, "d/n/Y H:i:s.v T")).c_str());
+   debugA("GPS_time_status=%d - GPS_last_sync_time=%d - has_GPS = %d - no_gps = %d\r",GPS_time_status, GPS_last_sync_time, has_GPS , no_gps);  // time & millis of last GPS_PPS rising edge
    debugA("NTP_time_status=%d - NTP_last_sync_time=%d - standalone = %d \r",NTP_time_status,lastNtpUpdateTime(), standalone);  
 
    // try to set op_status
@@ -328,12 +328,12 @@ void check_time_sync_source_availability(void){
    int new_op_status = 0 ;
    bool ezTime_debug_old = ezTime_debug; // ezTime_debug= 1 ;
    if(ezTime_debug || RTC_debug){ 
-      last_aux_time=now(); 
-      debugA("check_time_sync_source_availability at %d/%d %s\r",now(),millis(), (UTC.dateTime(now(), "d/n/Y H:i:s.v T")).c_str());
+      if( ! last_aux_time )   last_aux_time=now();
+//      debugA("check_time_sync_source_availability at %d/%d %s\r",now(),millis(), (UTC.dateTime(now(), "d/n/Y H:i:s.v T")).c_str());
+      debugA("check_time_sync_source_availability at %d/%d %s\r",last_aux_time,millis(), (UTC.dateTime(last_aux_time, "d/n/Y H:i:s.v T")).c_str());
       debugA("GPS_time_status=%d - GPS_last_sync_time=%d - has_GPS = %d - no_gps = %d\r",GPS_time_status, GPS_last_sync_time, has_GPS , no_gps);  // time & millis of last GPS_PPS rising edge
       debugA("NTP_time_status=%d - NTP_last_sync_time=%d - standalone = %d \r",NTP_time_status,lastNtpUpdateTime(), standalone);  
-      };
-   // check for NTP and/or GPS status change
+      }  
 
    ezt::update_NTP_GPS(); // perform ezTime time update
    

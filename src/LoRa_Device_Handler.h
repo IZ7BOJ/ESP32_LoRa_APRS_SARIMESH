@@ -16,6 +16,8 @@
 #include <Syslog.h>
 #include "PortExpander8574_Support_Functions.h"
 #include "BCN_Structs.h"
+#include "boards.h"
+#include "utilities.h"
 
 extern LoraPrs::Config cfg;              // this global structure will keep all the relevant data related to the LORA_APRS application
 extern int counter6 ;  

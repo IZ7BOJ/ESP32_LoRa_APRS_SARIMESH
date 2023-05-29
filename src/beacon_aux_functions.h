@@ -30,7 +30,7 @@ extern QueueHandle_t xQueue_native_park;
 extern volatile bool Beacon_Mode  ;     // to debug  Task_1 
 extern byte BeaconId ;
 extern byte BeaconFmt ;   // beacon format
-extern bool BeaconSeqNbr;
+extern bool BeaconSeqNbr ;
 extern byte BeaconLocation ;
 extern byte BeaconEngineType ;
 extern byte BeaconRun ;

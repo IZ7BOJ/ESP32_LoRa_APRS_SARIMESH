@@ -68,20 +68,21 @@ bool LDH_SetLoraConfig(float loraFreq, float bw, byte sf, byte cr, int pwr, byte
   if(LoRa_debug) debugA("LDH_SetLoraConfig starting.... (LDH_Message_v2 size=%d)\r",sizeof( struct LDH_Message_v2 ) );
   //  vTaskDelay(pdMS_TO_TICKS(20000)); // for testing only
 
-  if(LoraDeviceType == 1){  // first generation lora chips
+  if(LoraDeviceType == 1){  // second  generation lora chips
                                   // initializzation depends on chips 1st or 2nd generation and module type
                                   // and on specific device chip for the module
     if( ! strcmp(LoRaDevice.c_str() , "E22_400M30S")) {
-      if(LoRa_debug) debugA("[SX1268] Initializing: loraFreq=%f - bw=%f - sf=%d - cr=%d - sync=%02X - pwr=%d - prlen=%d....", loraFreq, bw, sf, cr,sync,(int )pwr , prlen);
+      if(LoRa_debug) debugA("[SX1268 - E22_400M30S] Initializing: loraFreq=%f - bw=%f - sf=%d - cr=%d - sync=%02X - pwr=%d - prlen=%d....", loraFreq, bw, sf, cr,sync,(int )pwr , prlen);
       // int state = lora_2g.begin(433.725, 15.6, 9, 7,0x34,-9,15,0);  
       // int state = lora_2g.begin(433.725, 31.25, 7, 8, 0x34, -9, 15);  // example
       // int state = lora_2g.begin(loraFreq, bw , sf , cr , sync, pwr , prlen);
       int state = lora_2g.begin(loraFreq, bw , sf , cr , sync, pwr , prlen, 2.4, false );  // by MF 20220609 eByte   
       if (state == RADIOLIB_ERR_NONE) {   // state was passed by the .begin() above
         if(LoRa_debug) debugA("success!\r");
+        LoRaFreqNow = loraFreq ;
         }
       else {
-        if(LoRa_debug) debugA("failed, code %d: Aborting... please fix and reboot !\r ",state );
+        if(LoRa_debug) debugA("failed, code %d: Aborting... please fix and reboot  3 !\r ",state );
         return (false) ;
         };
       lora_2g.setRfSwitchPins(16, 17);
@@ -100,13 +101,13 @@ bool LDH_SetLoraConfig(float loraFreq, float bw, byte sf, byte cr, int pwr, byte
       lora_2g.setDio1Action(setFlag);
       // fixed:  PreambleLength=15, RXgain=0
 
-      if(LoRa_debug) debugA("[SX1268] Starting to listen ... ");    // start listening for LoRa packets
+      if(LoRa_debug) debugA("[SX1268 - E22_400M30S] Starting to listen ... ");    // start listening for LoRa packets
       state = lora_2g.startReceive();
       if (state == RADIOLIB_ERR_NONE) {
         if(LoRa_debug) debugA("success!\r");
         }     
       else {
-        if(LoRa_debug) debugA("failed, code %d: Aborting... please fix and reboot !\r ",state );
+        if(LoRa_debug) debugA("failed, code %d: Aborting... please fix and reboot 4 !\r ",state );
         return (false) ;
         };
       // additional device setup features
@@ -124,13 +125,14 @@ bool LDH_SetLoraConfig(float loraFreq, float bw, byte sf, byte cr, int pwr, byte
       } 
 
     else if (! strcmp(LoRaDevice.c_str(),"RA_01S")) {
-      if(LoRa_debug) debugA("[SX1268] Initializing: loraFreq=%f - bw=%f - sf=%d - cr=%d - sync=%02X - pwr=%d - prlen=%d....", loraFreq, bw, sf, cr,sync,(int )pwr , prlen);
+      if(LoRa_debug) debugA("[SX1268 - RA_01S] Initializing: loraFreq=%f - bw=%f - sf=%d - cr=%d - sync=%02X - pwr=%d - prlen=%d....", loraFreq, bw, sf, cr,sync,(int )pwr , prlen);
       int state = lora_2g.begin(loraFreq, bw , sf , cr , sync, pwr , prlen, 0, true );  // by MF 20221207  RA-01S
       if (state == RADIOLIB_ERR_NONE) {   // state was passed by the .begin() above
         if(LoRa_debug) debugA("success!\r");
+        LoRaFreqNow = loraFreq ;  
         }
       else {
-        if(LoRa_debug) debugA("failed, code %d: Aborting... please fix and reboot !\r ",state );
+        if(LoRa_debug) debugA("failed, code %d: Aborting... please fix and reboot 5 !\r ",state );
         return (false) ;
         };
       lora_2g.setRfSwitchPins(16, 17);   
@@ -138,13 +140,13 @@ bool LDH_SetLoraConfig(float loraFreq, float bw, byte sf, byte cr, int pwr, byte
       debugA("\rgetCurrentLimit() = %f \r",lora_2g.getCurrentLimit());
       // setup rx interrupt support
       lora_2g.setDio1Action(setFlag);
-      if(LoRa_debug) debugA("[SX1268] Starting to listen ... ");    // start listening for LoRa packets
+      if(LoRa_debug) debugA("[SX1268 - RA_01S] Starting to listen ... ");    // start listening for LoRa packets
       state = lora_2g.startReceive();
       if (state == RADIOLIB_ERR_NONE) {
         if(LoRa_debug) debugA("success!\r");
         }     
       else {
-        if(LoRa_debug) debugA("failed, code %d: Aborting... please fix and reboot !\r ",state );
+        if(LoRa_debug) debugA("failed, code %d: Aborting... please fix and reboot 6 !\r ",state );
         return (false) ;
         };
     
@@ -162,28 +164,32 @@ bool LDH_SetLoraConfig(float loraFreq, float bw, byte sf, byte cr, int pwr, byte
          // end of 2nd generation chips then  first generation chips
 else {
   if(! strcmp(LoRaDevice.c_str(), "RFM98")) {
-    if(LoRa_debug) debugA("[SX1278] Initializing: loraFreq=%f - bw=%f - sf=%d - cr=%d - sync=%02X - pwr=%d ....", loraFreq, bw, sf, cr, sync, (int)pwr);
+    debugA("[SX1278 - RFM98] Initializing: loraFreq=%f - bw=%f - sf=%d - cr=%d - sync=%02X - pwr=%d ....", loraFreq, bw, sf, cr, sync, (int)pwr);
     // int state = lora_1g.begin(433.725, 15.6, 9, 7,0x34,16,15,0);
     // int state = lora_1g.begin(loraFreq, bw, sf, cr,sync,(int)pwr,prlen,0);
     // int state = lora_1g.begin(loraFreq, bw , sf , cr , sync, pwr , prlen,0);
-    int state = lora_1g.begin(loraFreq, bw , sf , cr , sync, pwr , prlen);
+    if (pwr >17 ) pwr=17 ;
+    if( (ESP_Config.cpu_type == "TTGO") ||  (ESP_Config.cpu_type == "HELTEC")  )  initPMU();
+    int state = lora_1g.begin(loraFreq, bw , sf , cr , sync, (int)pwr , prlen, 0 );
     if (state == RADIOLIB_ERR_NONE) {
-      //  LoRaChipVersion = lora_1g.getChipVersion();
+      LoRaChipVersion = lora_1g.getChipVersion();
       LoRaFreqNow = loraFreq ;
-      if(LoRa_debug) debugA("success (LoRaChipVersion=%d)!\r", LoRaChipVersion);
+      debugA("success (LoRaChipVersion=%d)!\r", LoRaChipVersion);
       }
     else {
-      if(LoRa_debug) debugA("failed, code %d: Aborting... please fix and reboot !\r ",state );
+      debugA("failed, code %d: Aborting... please fix and reboot 1 !\r ",state );
       return(false);
       };
-    lora_1g.setDio0Action(setFlag);                                                        
-    if(LoRa_debug) debugA("[SX1278] Starting to listen ... ");  // start listening for LoRa packets
+//    lora_1g.setDio0Action(setFlag, 1 );          // 20230508          
+    lora_1g.setDio0Action(setFlag, RISING);
+                                    
+    debugA("[SX1278 - RFM98] Starting to listen ... ");  // start listening for LoRa packets
     state = lora_1g.startReceive();
     if (state == RADIOLIB_ERR_NONE) {
-      // if(LoRa_debug) debugA("success!\r");
+      debugA("success!\r");
       }    
     else {
-      if(LoRa_debug) debugA("failed, code %d: Aborting... please fix and reboot !\r ",state );
+      debugA("failed, code %d: Aborting... please fix and reboot 2 !\r ",state );
       return(false);
       };
 
@@ -213,7 +219,7 @@ else {
     return(false);
     };
   //  RED_LED_disable();     
-  if(LoRa_debug) debugA("LDH_SetLoraConfig: LoRa device setup OK: up & running! (enableInterrupt = true)\r");
+  debugA("LDH_SetLoraConfig: LoRa device setup OK: up & running! (enableInterrupt = true)\r");
   return(true);
 }
 
@@ -521,11 +527,11 @@ void LoRa_Device_Handler_setup( void ){      //LoRa_Device_Handler: task to hand
 
   // LoRa module init allways done with default parameters
   //   if ( ! LDH_SetLoraConfig( loraFreq,  bw,  sf,  cr, pwr, sync,  prlen , lora_mod_type)){
-  if ( ! LDH_SetLoraConfig( 433.725,  31.25,  7,  7,  0,  0x34,  -9 ,    "")){
-    if(LoRa_debug) debugA("LoRa_Device_Handler: LDH_SetLoraConfig pre-initialization failed LoRa device setup..  will try later....\r");
+  if ( ! LDH_SetLoraConfig( 433.775,  125,  12,  8,  10,  0x12,  10 , "")){
+    debugA("LoRa_Device_Handler: LDH_SetLoraConfig pre-initialization failed LoRa device setup..  will try later....\r");
     }
   else{
-    if(LoRa_debug) debugA("\rLoRa_Device_Handler: LDH_SetLoraConfig pre-initialization successfull... LoRa device OK!\r");
+    debugA("\rLoRa_Device_Handler: LDH_SetLoraConfig pre-initialization successfull... LoRa device OK!\r");
     };
 
   BCN_LDH_cfg = BCN_APRS_cfg ;  // set BCN_LDH_cfg        
@@ -563,7 +569,7 @@ void LoRa_Device_Handler_loop( void ){      //LoRa_Device_Handler: task to handl
 
     if(LDM_Msg_v2.MsgType == 1 ){   // LoRa Mode Initialization
       // debugA("LoRa_Device_Handler-MSG_IN: LoraFreq=%8.4f - LoraBw=%8.4f - LoraSf=%d - LoraCodingRate=%d  - LoraPower=%d - LoraSync=%02X - LoraPreambleLen=%d \r", LDM_Msg_v2.Lv.LoraFreq, LDM_Msg_v2.Lv.LoraBw  ,LDM_Msg_v2.Lv.LoraSf , LDM_Msg_v2.Lv.LoraCodingRate ,  LDM_Msg_v2.Lv.LoraPower , LDM_Msg_v2.Lv.LoraSync ,  LDM_Msg_v2.Lv.LoraPreambleLen  ); 
-      float LoraFreq_nominal =  LDM_Msg_v2.Lv.LoraFreq * ( 1.0 + (float)(LDM_Msg_v2.Lv.LoraFreqCorr)/1000000.0 );   
+      float LoraFreq_nominal =  LDM_Msg_v2.Lv.LoraFreq * ( 1.0 + (float)(LDM_Msg_v2.Lv.LoraFreqCorr)/10000000.0 );   
       if ( LDH_SetLoraConfig( LoraFreq_nominal, LDM_Msg_v2.Lv.LoraBw  ,LDM_Msg_v2.Lv.LoraSf , LDM_Msg_v2.Lv.LoraCodingRate ,  LDM_Msg_v2.Lv.LoraPower , LDM_Msg_v2.Lv.LoraSync ,  LDM_Msg_v2.Lv.LoraPreambleLen   , "" )){
         // if ( LDH_SetLoraConfig(433.725,  31.25,  7,  7,  22,  0x34,  -9 ,"" )){ // example 
         if(LoRa_debug) debugA("\rLoRa_Device_Handler: LDH_SetLoraConfig successfull ....\r");
@@ -644,7 +650,7 @@ void LoRa_Device_Handler_loop( void ){      //LoRa_Device_Handler: task to handl
     //  restore APRS LoRa RX/TX saved configuration BCN_APRS_cfg to be able to restart LoRa APRS app dinamically
     if(( LDH_RX_Mode == 0) && ! BCN_VectorCmp(BCN_LDH_cfg , BCN_APRS_cfg)){  // rx is in APRS mode so need to restore settings if changed
       BCN_LDH_cfg = BCN_APRS_cfg ;  // set BCN_LDH_cfg
-      float LoraFreq_nominal =  BCN_LDH_cfg.LoraFreq * ( 1.0 + (float)(BCN_LDH_cfg.LoraFreqCorr)/1000000.0 );   
+      float LoraFreq_nominal =  BCN_LDH_cfg.LoraFreq * ( 1.0 + (float)(BCN_LDH_cfg.LoraFreqCorr)/10000000.0 );   
       if ( LDH_SetLoraConfig( LoraFreq_nominal, BCN_LDH_cfg.LoraBw  ,BCN_LDH_cfg.LoraSf , BCN_LDH_cfg.LoraCodingRate ,  BCN_LDH_cfg.LoraPower , BCN_LDH_cfg.LoraSync ,  BCN_LDH_cfg.LoraPreambleLen   , "" )){
         // debugA("LoRa_Device_Handler_loop: LDH_SetLoraConfig success: LoraFreq=%8.4f - LoraBw=%8.4f - LoraSf=%d - LoraCodingRate=%d  - LoraPower=%d - LoraSync=%02X - LoraPreambleLen=%d \r", BCN_LDH_cfg.LoraFreq, BCN_LDH_cfg.LoraBw  ,BCN_LDH_cfg.LoraSf , BCN_LDH_cfg.LoraCodingRate ,  BCN_LDH_cfg.LoraPower , BCN_LDH_cfg.LoraSync ,  BCN_LDH_cfg.LoraPreambleLen ); 
         };
@@ -729,7 +735,12 @@ void LoRa_Device_Handler_loop( void ){      //LoRa_Device_Handler: task to handl
         l_snr = lora_2g.getSNR();
         rssi = lora_2g.getRSSI();
         frequencyError = 0.0;
-        lora_frequencyError = frequencyError;        
+//        lora_frequencyError = frequencyError;        // replaced 20230507
+        frequencyError = lora_2g.getFrequencyError();
+        lora_frequencyError = frequencyError;
+        float ppm_now = frequencyError/LoRaFreqNow ;
+        ppm_runtime= (3.0*ppm_runtime + ppm_now )/4.0;
+        if(LoRa_debug) debugA("\r===-------=====> LoRaFreqNow=%12.5f - frequencyError=%8.5f - ppm_now=%8.5f  ==> ppm_runtime=%8.5f\r",LoRaFreqNow, frequencyError, ppm_now , ppm_runtime);
         };    
 
       lora_snr = l_snr ;
@@ -758,26 +769,27 @@ void LoRa_Device_Handler_loop( void ){      //LoRa_Device_Handler: task to handl
       String signalReport ;
       if(LoraDeviceType == 1){  // second  generation lora chips
         signalReport = String(" (") + 
-        String(LoRa_DutyCycle)  +  String(" ") + 
+//        String(LoRa_DutyCycle)  +  String(" ") + 
         String(NodeName.c_str()) + String(" ") + 
-        String(l_snr < 0 ? rssi + l_snr : rssi) + String(" ") + 
-        String(l_snr) + String(" ") +
-        String(frequencyError) + String(" ") + 
-        String(cpu_temp) + 
+        String(l_snr < 0 ? int(rssi + l_snr) : int(rssi)) + String(" ") + 
+        String(int(l_snr)) + String(" ") +
+        String(int(frequencyError)) + String(" ") + 
+//        String(cpu_temp) + 
         String(")") ;
         }
       else{           // first generation chips
         signalReport = String(" (") + 
-        String(LoRa_DutyCycle) + 
-        String(" ") + 
+//        String(LoRa_DutyCycle) + 
+//        String(" ") + 
         String(NodeName.c_str()) + 
         String(" ") + 
-        String(l_snr < 0 ? rssi + l_snr : rssi) + 
+        String(l_snr < 0 ? int(rssi + l_snr) : int(rssi)) + 
         String(" ") + 
-        String(l_snr) + 
-        String(" 0 ") +
-        String(" ") + 
-        String(cpu_temp) + 
+        String(int(l_snr)) + 
+        String(int(frequencyError)) + String(" ") + 
+//        String(" 0 ") +
+//        String(" ") + 
+//        String(cpu_temp) + 
         String(")") ;
         };
 

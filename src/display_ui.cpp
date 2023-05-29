@@ -13,6 +13,7 @@
 
 #include <Arduino.h>
 
+
 extern uint32_t last_display_update ;
  
 String StatusLine = String("WiFi=ON   GPS=3D-FIX"); 
@@ -54,6 +55,7 @@ extern volatile bool IoT_enable ;
 extern volatile bool iGate_Mode  ;         //   
 extern volatile bool Beacon_Mode  ;         //   
 extern volatile bool Admin_Mode  ;         //   
+extern volatile bool is_at_defaults  ;
 
 
 //Virtual display storage
@@ -72,10 +74,40 @@ extern volatile uint16_t AdminTimeOutCounter ;
 
 extern Adafruit_ST7789 tft ;
 
-#include "SSD1306Ascii.h"
-#include "SSD1306AsciiWire.h"
-extern SSD1306AsciiWire display;
+//#include "SSD1306Ascii.h"
+//#include "SSD1306AsciiWire.h"
+//extern SSD1306AsciiWire display;
+// #include "ezTime_loc.h"
+// extern time_t ezt::now  ;
 
+extern volatile uint8_t  oled_orient;
+
+
+
+#ifdef OLED_MOD
+  #ifdef USE_SSD1306_ASCII_LIB
+    #include "SSD1306Ascii.h"
+    #include "SSD1306AsciiWire.h"
+    extern SSD1306AsciiWire display;
+  #else                                // OLED display support via adafruit OLED library
+    #include <Adafruit_GFX.h>    // Core graphics library
+    #include <Adafruit_SSD1306.h>
+    extern Adafruit_SSD1306 display ;
+
+#include <Fonts/FreeMonoBoldOblique12pt7b.h>
+#include <Fonts/FreeMono9pt7b.h>
+#include "FONTS/Basic_Comical_Regular_NC12pt7b.h"
+#include "FONTS/Basic_Comical_Regular_NC11pt7b.h"
+#include "FONTS/Basic_Comical_Regular_NC10pt7b.h"
+#include "FONTS/Basic_Comical_Regular_NC9pt7b.h"
+#include "FONTS/Basic_Comical_Regular_NC8pt7b.h"
+#include "FONTS/Basic_Comical_Regular_NC7pt7b.h"
+#include "FONTS/Basic_Comical_Regular_NC6pt7b.h"
+
+
+        //  #include "OLED_test_case.h"
+  #endif
+#endif   // OLED_MOD
 
 
 extern String LastFunction ;
@@ -165,7 +197,7 @@ void display_st7735_man(void) ;
 
 
 
-#include <fonts/Verdana12_bold.h>
+//#include <fonts/Verdana12_bold.h>
 
 
 void StatusLineUpdate(void){
@@ -209,18 +241,21 @@ if( !(xSemaphoreTake(i2c_mutex_v, ( TickType_t ) 2) )){
     return;  };
     
 #ifndef USE_SSD1306_ASCII_LIB
+
+
 #ifdef OLED_MOD 
+
 if((has_SSD1306) && (display_event == 1 )){   // this display has only 5 text lines
      if(( ! BT_KISS_Mode && ! Serial_KISS_Mode && ! TCP_KISS_Mode) &&(LoRa_initialized)){  // LoRa iGate/Tracker normal operation
        if( LoRa_rx_packets > 0 ){        
-          String line_0 = String("RSSI: ") + String(lora_rssi) + String(" dBm");
-          String line_1 = String("SNR:  ") + String(lora_snr) + String(" dB") + " ERR:" + String(lora_frequencyError) + String(" Hz");
+          String line_0 = String("RSSI:") + String(lora_rssi) + String("dBm");
+          String line_1 = String("SNR:") + String(lora_snr) + String("dB") + "  ERR:" + String(int(lora_frequencyError)) + String("Hz");
           String line_2 = ui3_payload;   // original packet source call 
           String line_3 = ui4_payload ;  // first node report
           String line_4 = ui5_payload ;  // last node report
 
           // display LoRa TX/RX operation on SSD1306 OLED display 
-          display.clearDisplay(); 
+          display.clearDisplay();
           display.setFont(&Basic_Comical_Regular_NC6pt7b);
           display.setCursor(0, 11); display.print(line_0); 
           display.setCursor(0, 24); display.print(line_1); 
@@ -234,7 +269,6 @@ if((has_SSD1306) && (display_event == 1 )){   // this display has only 5 text li
           display.display();
            }
         else {        
-//           tft.setTextSize(1);
           // display waiting for LoRa Spot 
           display.clearDisplay(); display.display(); 
           display.setFont(&Basic_Comical_Regular_NC6pt7b);
@@ -264,8 +298,8 @@ if((has_SSD1306) && (display_event == 1 )){   // this display has only 5 text li
          ui4_payload= String("KISS RX=") + Kiss_rx_packets + String(" TX=") + Kiss_tx_packets ;
          if( LoRa_rx_packets > 0 ){        
             String line_0 = String("   LoRa TNC KISS_Mode");
-            String line_1 = String("RSSI: ") + String(lora_rssi) + String(" dBm");
-            String line_2 = String("SNR:  ") + String(lora_snr) + String(" dB") + " ERR:" + String(lora_frequencyError) + String(" Hz");
+            String line_1 = String("RSSI:") + String(lora_rssi) + String("dBm");
+            String line_2 = String("SNR:") + String(lora_snr) + String("dB") + "  ERR:" + String(int(lora_frequencyError)) + String("Hz");
             String line_3 = ui3_payload;   // original packet source call 
             String line_4 = ui4_payload ;  // first node report
         //  String line_5 = ui5_payload ;  // last node report
@@ -285,7 +319,6 @@ if((has_SSD1306) && (display_event == 1 )){   // this display has only 5 text li
           display.display();
            }
         else {        
-//           tft.setTextSize(1);
           // display waiting for LoRa Spot 
           display.clearDisplay(); display.display(); 
           display.setFont(&Basic_Comical_Regular_NC6pt7b);
@@ -307,44 +340,52 @@ if((has_SSD1306) && (display_event == 1 )){   // this display has only 5 text li
          display.display();     
          }                 
      else if ((BT_KISS_Mode || Serial_KISS_Mode || TCP_KISS_Mode) && ( LoRa_initialized)){
-         String line_date = String(UTC.dateTime(now(), "d/n/Y H:i:s.v")); 
+//         String line_date = String(UTC.dateTime(now(), "d/n/Y H:i:s.v")); 
          String line_0 ="";
          if(BT_KISS_Mode){ String line_0 = String("Bluetooth KISS Client Mode");}
          else if(Serial_KISS_Mode){ String line_0 = String("Serial KISS Client Mode"); }
          else if(TCP_KISS_Mode){ String line_0 = String("TCP KISS Client Mode"); };
                  
-         String line_1 = String("RSSI: ") + String(lora_rssi) + String(" dBm");
-         String line_2 = String("SNR:  ") + String(lora_snr) + String(" dB") ;
-         String line_3 = String("ERR:  ") + String(lora_frequencyError) + String(" Hz");
+         String line_1 = String("RSSI:") + String(lora_rssi) + String("dBm");
+         String line_2 = String("SNR:") + String(lora_snr) + String("dB") ;
+         String line_3 = String("  ERR:") + String(int(lora_frequencyError)) + String("Hz");
 
          display.clearDisplay(); 
          display.setFont(&Basic_Comical_Regular_NC6pt7b);
          display.setCursor(0, 11); display.print(line_0);
-         display.setCursor(0, 24); display.print(line_date);        
+//         display.setCursor(0, 24); display.print(line_date);        
          display.setCursor(0, 37); display.print("Last RX msg report");  
          display.setCursor(0, 50); display.print(line_1); 
          display.setCursor(0, 63); display.print(line_2); 
          display.display();           }
 
   }  // end of has_SSD1306 display_event =1
+
+ 
 else if((has_SSD1306) && (display_event == 3 )){   // this display has only 5 text lines
          display.clearDisplay(); display.display();
          display.setFont(&Basic_Comical_Regular_NC6pt7b);
          display.setCursor(20, 30); display.print("SENDING BEACON NOW !"); 
          display.setCursor(0, 53); display.print("____________________"); 
          display.setCursor(10, 63); display.print(StatusLine); 
-         display.display();  };   // end of has_SSD1306 display_event =3
-  };
+         display.display();  
+         };   // end of has_SSD1306 display_event =3
+//  };
+
+
 #endif   // OLED_MOD
 
+
+
 #else    //                    USE_SSD1306_ASCII_LIB
+
 
 #ifdef OLED_MOD    // OK 20220320
 if((has_SSD1306) &&  (display_event == 1 )){   // this display has only 5 text lines
      if(( ! BT_KISS_Mode && ! Serial_KISS_Mode && ! TCP_KISS_Mode ) &&(LoRa_initialized)){  // LoRa iGate/Tracker normal operation
        if( LoRa_rx_packets > 0 ){        
-          String line_0 = String("RSSI: ") + String(lora_rssi) + String(" dBm");
-          String line_1 = String("SNR:  ") + String(lora_snr) + String(" dB") + " ERR:" + String(lora_frequencyError) + String(" Hz");
+          String line_0 = String("RSSI:") + String(lora_rssi) + String("dBm");
+          String line_1 = String("SNR:") + String(lora_snr) + String("dB") + "  ERR:" + String(int(lora_frequencyError)) + String("Hz");
           String line_2 = ui3_payload;   // original packet source call 
           String line_3 = ui4_payload ;  // first node report
           String line_4 = ui5_payload ;  // last node report
@@ -361,11 +402,19 @@ if((has_SSD1306) &&  (display_event == 1 )){   // this display has only 5 text l
           display.println(StatusLine);
            }
         else {        
-          display.setFont(Verdana12_bold); display.clear(); display.setLetterSpacing(1);          
-          display.println("        WAITING    ");
-          display.println("   FOR LORA SPOTS");
+          display.setFont(Verdana12_bold); display.clear(); display.setLetterSpacing(1); 
+          if(is_at_defaults){
+          display.println("     WARNING !!!    ");
+          display.println("  DEFAULT CONFIG");
           display.println("   ");
-          display.println("____________________");
+          display.println("____________________");          
+          }
+          else{
+            display.println("        WAITING    ");
+            display.println("   FOR LORA SPOTS");
+            display.println("   ");
+            display.println("____________________");
+          } 
           display.println(StatusLine);
           };  // end of LoRa_rx_packets 
        }
@@ -373,8 +422,8 @@ if((has_SSD1306) &&  (display_event == 1 )){   // this display has only 5 text l
          ui3_payload= String("LoRa RX=") + LoRa_rx_packets + String(" TX=") + LoRa_tx_packets ;
     //     ui4_payload= String("KISS RX=") + Kiss_rx_packets + String(" TX=") + Kiss_tx_packets ;
          if( LoRa_rx_packets > 0 ){        
-            String line_0 = String("RSSI: ") + String(lora_rssi) + String(" dBm");
-            String line_1 = String("SNR:  ") + String(lora_snr) + String(" dB") + " ERR:" + String(lora_frequencyError) + String(" Hz");
+            String line_0 = String("RSSI:") + String(lora_rssi) + String("dBm");
+            String line_1 = String("SNR:") + String(lora_snr) + String("dB") + "  ERR:" + String(int(lora_frequencyError)) + String("Hz");
             String line_2 = ui3_payload;   // original packet source call 
             String line_3 = ui4_payload ;  // first node report
         //  String line_4 = ui5_payload ;  // last node report
@@ -440,6 +489,12 @@ else if((has_SSD1306) && (display_event == 6 )){   // this display has only 5 te
     display.setFont(Verdana12_bold); display.clear(); display.setLetterSpacing(1);          
     display.println("SENDING BEACON !");
 } // end of has_SSD1306 display_event = 6
+else if((has_SSD1306) && (display_event == 16 )){   // this display has only 5 text lines
+    display.setFont(Verdana12_bold); display.clear(); display.setLetterSpacing(1);          
+    display.println("INVALID BEACON");
+    display.println(" PAYLOAD !");
+
+} // end of has_SSD1306 display_event = 16
 
 
 
@@ -486,8 +541,8 @@ if((has_ST77XX) && (display_event == 1 ) ){   // this display has 6 text lines
       if(( ! BT_KISS_Mode && ! Serial_KISS_Mode && ! TCP_KISS_Mode) &&(LoRa_initialized)){  // LoRa iGate/Tracker normal operation
          if( LoRa_rx_packets > 0 ){        
             String line_0 = String("GPS: ") + String(lat_now) + String(" ") + String(lon_now);
-            String line_1 = String("RSSI: ") + String(lora_rssi) + String(" dBm");
-            String line_2 = String("SNR:  ") + String(lora_snr) + String(" dB") + " ERR:" + String(lora_frequencyError) + String(" Hz");
+            String line_1 = String("RSSI:") + String(lora_rssi) + String("dBm");
+            String line_2 = String("SNR:") + String(lora_snr) + String("dB") + "  ERR:" + String(int(lora_frequencyError)) + String("Hz");
             String line_3 = ui3_payload;   // original packet source call 
             String line_4 = ui4_payload ;  // first node report
             String line_5 = ui5_payload ;  // last node report
@@ -516,8 +571,14 @@ if((has_ST77XX) && (display_event == 1 ) ){   // this display has 6 text lines
           // display waiting for LoRa Spot 
           tft.fillScreen(ST77XX_BLACK);
           tft.setTextColor(ST77XX_WHITE);
-          tft.setCursor(0, 40); tft.print("            WAITING");
-          tft.setCursor(0, 70); tft.print("       FOR LORA SPOTS");
+          if(is_at_defaults){
+              tft.setCursor(0, 40); tft.print("       WARNING !!!!");
+              tft.setCursor(0, 70); tft.print("     DEFAULT CONFIG");
+          }
+          else{
+              tft.setCursor(0, 40); tft.print("            WAITING");
+              tft.setCursor(0, 70); tft.print("       FOR LORA SPOTS");
+          };
           tft.setTextColor(ST77XX_WHITE);
           tft.setCursor(0, 110); tft.print("____________________");
           tft.setTextColor(ST77XX_YELLOW);
@@ -544,8 +605,8 @@ if((has_ST77XX) && (display_event == 1 ) ){   // this display has 6 text lines
     //     ui4_payload= String("KISS RX=") + Kiss_rx_packets + String(" TX=") + Kiss_tx_packets ;
          if( LoRa_rx_packets > 0 ){        
             String line_0 = String("   LoRa TNC KISS_Mode");
-            String line_1 = String("RSSI: ") + String(lora_rssi) + String(" dBm");
-            String line_2 = String("SNR:  ") + String(lora_snr) + String(" dB") + " ERR:" + String(lora_frequencyError) + String(" Hz");
+            String line_1 = String("RSSI:") + String(lora_rssi) + String("dBm");
+            String line_2 = String("SNR:") + String(lora_snr) + String("dB") + "  ERR:" + String(int(lora_frequencyError)) + String("Hz");
             String line_3 = ui3_payload;   // original packet source call 
             String line_4 = ui4_payload ;  // first node report
             String line_5 = ui5_payload ;  // last node report
@@ -594,19 +655,19 @@ if((has_ST77XX) && (display_event == 1 ) ){   // this display has 6 text lines
          tft.setCursor(80, 60); tft.print("/ "); tft.setCursor(100, 60); tft.print( String(AdminTimeOut));
          }                 
      else if ((BT_KISS_Mode || Serial_KISS_Mode || TCP_KISS_Mode ) && ( LoRa_initialized)){
-         String line_date = String (UTC.dateTime( ezt::now(), "d/n/Y H:i:s.v")); 
+//         String line_date = String (UTC.dateTime( ezt::now(), "d/n/Y H:i:s.v")); 
          String line_0 ="";
          if(BT_KISS_Mode){ String line_0 = String("Bluetooth KISS Client Mode");}
          else if(Serial_KISS_Mode){ String line_0 = String("Serial KISS Client Mode"); };        
-         String line_1 = String("RSSI: ") + String(lora_rssi) + String(" dBm");
-         String line_2 = String("SNR:  ") + String(lora_snr) + String(" dB") ;
-         String line_3 = String("ERR:  ") + String(lora_frequencyError) + String(" Hz");
+         String line_1 = String("RSSI:") + String(lora_rssi) + String("dBm");
+         String line_2 = String("SNR:") + String(lora_snr) + String("dB") ;
+         String line_3 = String("  ERR:") + String(int(lora_frequencyError)) + String("Hz");
          
          tft.fillScreen(ST77XX_BLACK);
          tft.setCursor(0, 0); 
          tft.setTextColor(ST77XX_GREEN);      
          tft.setCursor(0, 11); tft.print(line_0);
-         tft.setCursor(0, 24); tft.print(line_date);        
+//         tft.setCursor(0, 24); tft.print(line_date);        
          tft.setCursor(0, 37); tft.print("Last RX msg report");  
          tft.setCursor(0, 50); tft.print(line_1); 
          tft.setCursor(0, 63); tft.print(line_2); 
@@ -656,6 +717,14 @@ else if((has_ST77XX) &&  (display_event == 6 ) ){
       tft.fillScreen(ST77XX_BLACK);
       tft.setTextColor(ST77XX_GREEN);
       tft.setCursor(30, 60); tft.print("SENDING BEACON !");
+}
+else if((has_ST77XX) &&  (display_event == 16 ) ){
+      tft.setTextSize(1);
+      // display send beacon 
+      tft.fillScreen(ST77XX_BLACK);
+      tft.setTextColor(ST77XX_GREEN);
+      tft.setCursor(30, 60); tft.print("INVALID BEACON");
+      tft.setCursor(30, 80); tft.print("  PAYLOAD !");
 }
 else if((has_ST77XX) &&  (display_event == 7 ) ){
       tft.setTextSize(1);

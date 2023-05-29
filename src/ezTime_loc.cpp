@@ -427,8 +427,8 @@ void update_NTP_GPS() {   // updates NTP_time_status and GPS_time_status
         measured_at = measured_at_NTP ;
        };
 
-    if(query_ret_GPS ) GPS_last_sync_time = t_GPS ;
-    if(query_ret_NTP ) NTP_last_sync_time = t_NTP ;
+    if(query_ret_GPS ) { GPS_last_sync_time = t_GPS ; last_aux_time=now();  };
+    if(query_ret_NTP ) { NTP_last_sync_time = t_NTP ; last_aux_time=now();  };
 
     if ((query_ret_NTP || query_ret_GPS ) && t) {
        // at least one of the time sync sources is available     

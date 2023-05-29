@@ -1,6 +1,25 @@
 // I2C_Support_Functions.cpp
 #include "I2C_Support_Functions.h"
 
+void OLED_Reset(void){
+  if(oled_rst){
+    pinMode(oled_rst,OUTPUT);
+    digitalWrite(oled_rst, LOW); // i.e. set GPIO16 low to reset HELTEC OLED
+    delay(50);
+    digitalWrite(oled_rst, HIGH);
+    delay(50);
+    };
+
+  if(O_RST){
+    pinMode(O_RST,OUTPUT);
+    digitalWrite(O_RST, LOW); // i.e. set GPIO16 low to reset HELTEC OLED
+    delay(50);
+    digitalWrite(O_RST, HIGH);
+    delay(50);
+    };    
+}
+
+
 #ifdef FORCE_SERIAL_DEBUG    
 
 uint8_t I2C_Scanner(void){

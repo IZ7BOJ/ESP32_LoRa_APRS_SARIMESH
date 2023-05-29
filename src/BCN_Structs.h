@@ -18,4 +18,5 @@ struct BeaconRunTimeConfig {
   byte LoraPreambleLen ;   // 6
 }  ;
 
+
 #endif

@@ -30,7 +30,7 @@ bool loadConfigurationFromFlash(const char *filename) {  // Loads the configurat
   // Deserialize the JSON document
   DeserializationError error = deserializeJson(doc, file);
   if (error) {
-    Serial.print("Failed to read file, using default configuration\r\n");
+    Serial.print("Failed to Dserialize Json configuration file, using default configuration\r\n");
     return false;
     };
 
@@ -157,6 +157,10 @@ bool loadConfigurationFromFlash(const char *filename) {  // Loads the configurat
     ESP_Config.gps_tx = doc["gps_tx"] ;
     ESP_Config.PayloadStyle = doc["PayloadStyle"] ;
     ESP_Config.RepeaterOperation = doc["RepeaterOperation"] ;
+    ESP_Config.LocationCompression = doc["LocationCompression"] ;
+    ESP_Config.BlackList = doc["BlackList"] ;
+
+    ESP_Config.AgileBeaconing = doc["AgileBeaconing"] ;
 
   
 
@@ -316,6 +320,11 @@ void saveConfigurationToFlash(const char *filename ) {  // Saves the configurati
    doc["gps_tx"] = ESP_Config.gps_tx ;
    doc["PayloadStyle"] = ESP_Config.PayloadStyle ;
    doc["RepeaterOperation"] = ESP_Config.RepeaterOperation ;
+   doc["LocationCompression"] = ESP_Config.LocationCompression ;
+   doc["BlackList"] = ESP_Config.BlackList ;
+
+   doc["AgileBeaconing"] = ESP_Config.AgileBeaconing ;
+
    
     ESP_Config.PayloadStyle = doc["PayloadStyle"] ;
     ESP_Config.RepeaterOperation = doc["RepeaterOperation"] ;

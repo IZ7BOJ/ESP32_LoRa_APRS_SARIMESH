@@ -7,8 +7,8 @@
 // SW Revision id
 #define SW_REVISION_ID "4.1.0_20230515"
 //#define CPU_TYPE "ESP32 Dev V4"  // name of microntroller cpu module
-#define CPU_TYPE "TTGO"  // name of microntroller cpu module
-//#define CPU_TYPE "HELTEC"  // name of microntroller cpu module
+//#define CPU_TYPE "TTGO"  // name of microntroller cpu module
+#define CPU_TYPE "HELTEC"  // name of microntroller cpu module
 
 
 // Master configuration directives: need to be customized depending on HW/SW configuration of the device
@@ -38,14 +38,14 @@
 
 #define EZTIME_GPS_RTC              // allows to integrate GPS support into eZtime library operation; must also be updated in ezTime.cpp 
 #define USE_ADAFRUIT_TFT_LIB        // selects the TFT library to use ( adafruit/eSPI ) default is eSPI lib
-#define USE_SSD1306_ASCII_LIB     // select SSD1306 library to use (ASCII_LIB / standard lib) default is standard lib
+//#define USE_SSD1306_ASCII_LIB       // select SSD1306 library to use (ASCII_LIB / standard lib) default is standard lib
 #define BLUETOOTH_DISABLED          // to completely remove any bluetooth support
 #define USE_ARDUINO_OTA             // enable Over The Air SW loading
 #define ACCESS_POINT_PASSWORD  "esp32" 
 #define AdminTimeOut 6000             // original 180 secs Defines the Time in Seconds, when the Admin-Mode will be disabled
 //#define SAVE_PROTECT                // to disallow saving configuration 
 //#define FORCE_DEFAULTS              // to force default configuration
-// #define GET_CONFIG_FROM_FRAM       // if defined the device configuration will be retrived from FRAM; otherwise from LittleFS 
+// #define GET_CONFIG_FROM_FRAM          // if defined the device configuration will be retrived from FRAM; otherwise from LittleFS 
 
 #define NET_UPSTREAM_MON_ENABLE       // enables NetworkUpstreamMonitor
 
@@ -60,7 +60,7 @@
 
 // HW modules equipped
 #define LORA_MOD         // define if a LoRa device is available
-#define GPS_MOD           // define if a serial GPS is available
+//#define GPS_MOD           // define if a serial GPS is available
 //#define W5500_MOD        // define if an W5500 ethernet module is available
 //#define W5500_USE_DHCP
 #define OLED_MOD         // define if an OLED display is available
@@ -74,35 +74,38 @@
 
 // https://github.com/Xinyuan-LilyGO/LilyGo-LoRa-Series/blob/master/examples/RadioLibExamples/SX1278/SX1278_Receive_Interrupt/utilities.h
 // LED/button/buzzer pin indicators
-#define RED_LED 14
-#define GREEN_LED 14
+//  Standard HW
+#define RED_LED 2
+#define GREEN_LED 2
 #define REBOOT 0
-#define BTN_PIN  39 //  39  // via analog_read 
+#define BTN_PIN  0 //  39  // via analog_read 
 #define BUZZER 0
 
 
 // I2C bus pins
 #define O_ADDR 0x3c
-#define O_SDA 21
-#define O_SCL 22
-#define O_RST 0
+#define O_SDA 4
+#define O_SCL 15
+#define O_RST 16
 #define O_FLIPSCREEN 1
 
 // LoRa specific pins
+// 5, 19, 27, 18, 14, 26, true)
 // SPI bus pins;defaults defined in C:\Users\root\Documents\Arduino\hardware\espressif\esp32\variants\ttgo-lora32-v1/pins_arduino.h:
 #define L_SCK 5    
 #define L_MISO 19   
 #define L_MOSI 27  
 #define L_SS 18   // GPIO18 -- SX1278's CS  -->  Tbeam
-#define L_RST 23 //  14     // default 23   // GPIO23 -- SX1278's RESET --> Tbeam
+#define L_RST 14 //  14     // default 23   // GPIO23 -- SX1278's RESET --> Tbeam
 #define L_DI0 26   // GPIO26 -- SX1278's IRQ(Interrupt Request)  -->  Tbeam
 #define L_DI02 0
 #define L_BUSY 32 
 
+// GPS specific pins
+#define GPS_RX 0
+#define GPS_TX 0
 
-// GPS RX/TX serial pins 
-#define GPS_RX 12
-#define GPS_TX 15
+
 
 // power management chip avalable in some HW platforms like TTGO
 #define POWERCHIP 0  // 0 = powerchip not available

@@ -35,7 +35,7 @@ void native_loop() {     // main native service loop
         // debugA("\r\rnative_loop-MSG_IN-4: LoRa packet transmission request received via IPP MsgSqNbr =%d - dueTime=%ld .... \r", LDM_Msg_v2.MsgSqNbr , LDM_Msg_v2.dueTime  ); 
         if(((LDM_Msg_v2.dueTime == 0.0 ) || (millis() > LDM_Msg_v2.dueTime))  ){
           if(LoRa_debug)debugA("native_loop-MSG_IN: EXEC LoRa packet transmission MsgSqNbr =%d - dueTime=%ld .... \r", LDM_Msg_v2.MsgSqNbr , LDM_Msg_v2.dueTime  ); 
-          float LoraFreq_nominal =  LDM_Msg_v2.Lv.LoraFreq * ( 1.0 + (float)(LDM_Msg_v2.Lv.LoraFreqCorr)/1000000.0 );   
+          float LoraFreq_nominal =  LDM_Msg_v2.Lv.LoraFreq * ( 1.0 + (float)(LDM_Msg_v2.Lv.LoraFreqCorr)/10000000.0 );   
           if ( LDH_SetLoraConfig( LoraFreq_nominal, LDM_Msg_v2.Lv.LoraBw  ,LDM_Msg_v2.Lv.LoraSf , LDM_Msg_v2.Lv.LoraCodingRate ,  LDM_Msg_v2.Lv.LoraPower , LDM_Msg_v2.Lv.LoraSync ,  LDM_Msg_v2.Lv.LoraPreambleLen   , "" )){
             // debugA("native_loop-MSG_IN-4: LDH_SetLoraConfig success: LoraFreq=%8.4f - LoraBw=%8.4f - LoraSf=%d - LoraCodingRate=%d  - LoraPower=%d - LoraSync=%02X - LoraPreambleLen=%d \r", LDM_Msg_v2.Lv.LoraFreq, LDM_Msg_v2.Lv.LoraBw  ,LDM_Msg_v2.Lv.LoraSf , LDM_Msg_v2.Lv.LoraCodingRate ,  LDM_Msg_v2.Lv.LoraPower , LDM_Msg_v2.Lv.LoraSync ,  LDM_Msg_v2.Lv.LoraPreambleLen  ); 
             BCN_LDH_cfg = LDM_Msg_v2.Lv ;  // set BCN_LDH_cfg
@@ -80,7 +80,7 @@ void native_loop() {     // main native service loop
           debugA("\r\r\n\r\n----[%s]-----> native_loop: LDH_SetLoraConfig (enter RX Beacon mode)\r", time_now.c_str());        
           if(syslog_available && BeaconEngineType == 0 ) syslog.logf(LOG_INFO, "enter LDH_RX_Mode ( with TX ) beacon at [%s]", time_now.c_str() );
           if(syslog_available && BeaconEngineType == 1 ) syslog.logf(LOG_INFO, "enter LDH_RX_Mode ( no TX ) beacon at [%s]", time_now.c_str() );
-          float LoraFreq_nominal =  LDM_Msg_v2.Lv.LoraFreq * ( 1.0 + (float)(LDM_Msg_v2.Lv.LoraFreqCorr)/1000000.0 );   
+          float LoraFreq_nominal =  LDM_Msg_v2.Lv.LoraFreq * ( 1.0 + (float)(LDM_Msg_v2.Lv.LoraFreqCorr)/10000000.0 );   
           if ( LDH_SetLoraConfig( LoraFreq_nominal, LDM_Msg_v2.Lv.LoraBw  ,LDM_Msg_v2.Lv.LoraSf , LDM_Msg_v2.Lv.LoraCodingRate ,  LDM_Msg_v2.Lv.LoraPower , LDM_Msg_v2.Lv.LoraSync ,  LDM_Msg_v2.Lv.LoraPreambleLen   , "" )){
             // if(LoRa_debug) debugA("native_loop-MSG_IN-5: LDH_SetLoraConfig success: LoraFreq=%8.4f - LoraBw=%8.4f - LoraSf=%d - LoraCodingRate=%d  - LoraPower=%d - LoraSync=%02X - LoraPreambleLen=%d \r", LDM_Msg_v2.Lv.LoraFreq, LDM_Msg_v2.Lv.LoraBw  ,LDM_Msg_v2.Lv.LoraSf , LDM_Msg_v2.Lv.LoraCodingRate ,  LDM_Msg_v2.Lv.LoraPower , LDM_Msg_v2.Lv.LoraSync ,  LDM_Msg_v2.Lv.LoraPreambleLen  ); 
             BCN_LDH_cfg = LDM_Msg_v2.Lv ;  // set BCN_LDH_cfg
@@ -123,7 +123,7 @@ void native_loop() {     // main native service loop
           debugA("\r----[%s]-----> native_loop: LDH_SetLoraConfig (exit RX Beacon mode) \r\r\n\r\n", time_now.c_str());        
           if(syslog_available && BeaconEngineType == 0 ) syslog.logf(LOG_INFO, "exit LDH_RX_Mode ( with TX ) beacon at [%s]", time_now.c_str() );
           if(syslog_available && BeaconEngineType == 1 ) syslog.logf(LOG_INFO, "exit LDH_RX_Mode ( no TX ) beacon at [%s]", time_now.c_str() );
-          float LoraFreq_nominal =  BCN_APRS_cfg.LoraFreq * ( 1.0 + (float)(BCN_APRS_cfg.LoraFreqCorr)/1000000.0 );   
+          float LoraFreq_nominal =  BCN_APRS_cfg.LoraFreq * ( 1.0 + (float)(BCN_APRS_cfg.LoraFreqCorr)/10000000.0 );   
           if ( LDH_SetLoraConfig( LoraFreq_nominal, BCN_APRS_cfg.LoraBw  ,BCN_APRS_cfg.LoraSf , BCN_APRS_cfg.LoraCodingRate ,  BCN_APRS_cfg.LoraPower , BCN_APRS_cfg.LoraSync ,  BCN_APRS_cfg.LoraPreambleLen   , "" )){
             // if(LoRa_debug) debugA("native_loop-MSG_IN-6: LDH_SetLoraConfig success: LoraFreq=%8.4f - LoraBw=%8.4f - LoraSf=%d - LoraCodingRate=%d  - LoraPower=%d - LoraSync=%02X - LoraPreambleLen=%d \r", BCN_APRS_cfg.LoraFreq, BCN_APRS_cfg.LoraBw  ,BCN_APRS_cfg.LoraSf , BCN_APRS_cfg.LoraCodingRate ,  BCN_APRS_cfg.LoraPower , BCN_APRS_cfg.LoraSync ,  BCN_APRS_cfg.LoraPreambleLen  ); 
             BCN_LDH_cfg = BCN_APRS_cfg ;  // set BCN_LDH_cfg

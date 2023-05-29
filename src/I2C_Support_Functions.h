@@ -17,6 +17,7 @@ extern volatile bool has_BME280 ;                // autodiscovery
 extern volatile bool has_Si7021 ;                // autodiscovery
 extern volatile bool has_FM24W256 ;              // autodiscovery
 extern volatile bool I2C_Busy ;
+extern volatile uint8_t oled_rst;
 
 uint8_t I2C_Scanner_alt();
 uint8_t I2C_Scanner();

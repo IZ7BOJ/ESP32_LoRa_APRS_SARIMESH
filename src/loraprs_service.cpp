@@ -33,9 +33,11 @@ bool Service::setup(const Config &conf){
    loraFreq_ = conf.LoraFreq;
    ownCallsign_ = AX25::Callsign(conf.AprsLogin);
    if (!ownCallsign_.IsValid()) {
-      if(APRS_debug) debugA("LoRa Service Setup: Own callsign is not valid\r");
+      // if(APRS_debug) 
+      debugA("\n\r\n\rWARNING: LoRa Service Setup: Own callsign (for aprs.fi access) is not valid- aborting setup\r");
       return(false);
       };
+      
    // create APRS-IS credentials login string
    aprsLogin_ = String("user ") + conf.AprsLogin + String(" pass ") + conf.AprsPass + String(" vers ") + CfgLoraprsVersion;
    if (conf.AprsFilter.length() > 0) { aprsLogin_ += String(" filter ") + conf.AprsFilter; } ;
@@ -44,6 +46,8 @@ bool Service::setup(const Config &conf){
    aprsPort_ = conf.AprsPort;
    aprsBeacon_ = conf.AprsRawBeacon;
    aprsBeaconPeriodSeconds_ = conf.AprsRawBeaconPeriodSeconds;
+   aprsBeaconPeriodmSecs = conf.AprsRawBeaconPeriodSeconds * 1000;
+
    aprsShortBeaconPeriodSeconds = conf.AprsRawBeaconPeriodSeconds;
    autoCorrectFreq_ = conf.EnableAutoFreqCorrection;
    addSignalReport_ = conf.EnableSignalReport;
@@ -54,18 +58,22 @@ bool Service::setup(const Config &conf){
    enableBeacon_ = conf.EnableBeacon;
 
    // setup LoRa device to use 
-   if(LoRa_debug) debugA("Service::setup: LoRa Radiolib init and LoRa device setup...\r");
+   // if(LoRa_debug) 
+   debugA("Service::setup: LoRa Radiolib init and LoRa device setup...\r");
    bool ret = SetLoraConfig(conf.LoraFreq, conf.LoraBw, conf.LoraSf, conf.LoraCodingRate, conf.LoraPower, conf.LoraSync, conf.LoraPreambleLen, "");
    if( !ret){
-      if(LoRa_debug) debugA("LoRa init failed: possible HW mismatch\r");
+      // if(LoRa_debug) 
+      debugA("LoRa init failed: possible HW mismatch - aborting setup \r");
       return(false);
       };
-   if(LoRa_debug) debugA("LoRa Service Setup: needsBt=%d - TCP_KISS_Mode=%d - BT_KISS_Mode=%d - Serial_KISS_Mode=%d\r",needsBt(), TCP_KISS_Mode, BT_KISS_Mode , BT_KISS_Mode, Serial_KISS_Mode );
+   // if(LoRa_debug) 
+   debugA("LoRa Service Setup: needsBt=%d - TCP_KISS_Mode=%d - BT_KISS_Mode=%d - Serial_KISS_Mode=%d\r",needsBt(), TCP_KISS_Mode, BT_KISS_Mode , BT_KISS_Mode, Serial_KISS_Mode );
    if (needsBt() || Serial_KISS_Mode || TCP_KISS_Mode) {
       setupBt(conf.BtName);  // this is for KISS mode operation
       };
    if (needsAprsis() && persistentConn_) {
-      if(LoRa_debug) debugA("LoRa Service Setup: starting APRS-IS connection...\r");
+      // if(LoRa_debug) 
+      debugA("LoRa Service Setup: starting APRS-IS connection...\r");
       reconnectAprsis();
       };
    // PrintLoraPrsConfig_private(conf);
@@ -113,9 +121,9 @@ bool Service::reconnectAprsis() {
 
 bool Service::SetLoraConfig(float loraFreq, float bw, byte sf, byte cr, int pwr, byte sync, byte prlen , String lora_mod_type){
    LastFunction = __func__ ;
-   if(LoRa_debug) debugA("Service::SetLoraConfig: starting SetLoraConfig....\r");
+   if(LoRa_debug)  debugA("Service::SetLoraConfig: starting SetLoraConfig....\r");
    while(! LoRa_initialized ){  // wait for LDH initialization complete...
-      if(LoRa_debug) debugA("Service::SetLoraConfig: waiting for LoRa_initialized ....\r");
+      if(LoRa_debug) debugA("Service::SetLoraConfig: waiting for LoRa_initialized ..%d..\r", LoRa_initialized );
       vTaskDelay(pdMS_TO_TICKS(500));
       };
    /*
@@ -128,14 +136,14 @@ bool Service::SetLoraConfig(float loraFreq, float bw, byte sf, byte cr, int pwr,
    static BeaconRunTimeConfig BCN_APRS_cfg_local  ;
    BCN_APRS_cfg_local = { 0, loraFreq, bw, sf, cr, sync, pwr, 0, prlen } ; 
    //  SetLoraConfig(BCN_APRS_cfg_local.LoraFreq, BCN_APRS_cfg_local.LoraBw,BCN_APRS_cfg_local.LoraSf, BCN_APRS_cfg_local.LoraCodingRate, BCN_APRS_cfg_local.LoraPower, BCN_APRS_cfg_local.LoraSync, BCN_APRS_cfg_local.LoraPreambleLen, "" );
-   float LoraFreq_nominal =  BCN_APRS_cfg_local.LoraFreq * ( 1.0 + (float)(BCN_APRS_cfg_local.LoraFreqCorr)/1000000.0 );   
+   float LoraFreq_nominal =  BCN_APRS_cfg_local.LoraFreq * ( 1.0 + (float)(BCN_APRS_cfg_local.LoraFreqCorr)/10000000.0 );   
    if ( ! LDH_SetLoraConfig(LoraFreq_nominal, BCN_APRS_cfg_local.LoraBw,BCN_APRS_cfg_local.LoraSf, BCN_APRS_cfg_local.LoraCodingRate, BCN_APRS_cfg_local.LoraPower, BCN_APRS_cfg_local.LoraSync, BCN_APRS_cfg_local.LoraPreambleLen, "" )){
-      if(LoRa_debug) debugA("\rService::SetLoraConfig: LDH_SetLoraConfig failed LoRa device setup....\r");
+      if(LoRa_debug)  debugA("\rService::SetLoraConfig: LDH_SetLoraConfig failed LoRa device setup....\r");
       return(false);
       };
    BCN_APRS_cfg = BCN_APRS_cfg_local;   // save BCN_APRS_cfg to be able to restart LoRa APRS app dinamically
    BCN_LDH_cfg = BCN_APRS_cfg ;
-   if(LoRa_debug) debugA("\rService::SetLoraConfig: LDH_SetLoraConfig: LoRa device setup successfull: using BCN_APRS_cfg={%d, %8.5f, %8.5f, %d, 0x%02X, %d, %d, %d}!!\r", 0, loraFreq, bw,   sf, cr, sync, pwr, 0, prlen );
+   if(LoRa_debug)  debugA("\rService::SetLoraConfig: LDH_SetLoraConfig: LoRa device setup successfull: using BCN_APRS_cfg={%d, %8.5f, %8.5f, %d, 0x%02X, %d, %d, %d}!!\r", 0, loraFreq, bw,   sf, cr, sync, pwr, 0, prlen );
    return(true);       
 }   // end of Service::SetLoraConfig
 
@@ -269,7 +277,9 @@ void Service::aprs_loop() {     // main LoRa APRS service loop
 #endif       
    else if( (needsBeacon()|| requirePeriodicBeacon ) && ( (EncapType == 1) ||  (EncapType == 2)  )) {
       // debugA("Starting sendPeriodicBeacon requirePeriodicBeacon = %d\r", requirePeriodicBeacon); 
-      sendPeriodicBeacon();
+//      if( AgileBeaconing == 0) {        // check if Agilebeaconing has to be performed
+         sendPeriodicBeacon();          // Agile is not enable so do standard beaconing
+//         };
       }
    else if( (needsBeacon()|| requirePeriodicShortBeacon ) && (EncapType == 0 )) {
       //     debugA("Starting sendPeriodicShortBeacon requirePeriodicShortBeacon = %d\r", requirePeriodicShortBeacon); 
@@ -297,6 +307,7 @@ void Service::sendPeriodicBeacon(){
       };
 
    long currentMs = millis();  long deltaMs_ = currentMs - previousBeaconMs_ ;
+   if( AgileBeaconing != 0) { previousBeaconMs_ = currentMs; }; // check if AgileBeaconing is active and disable standard beacon...
    if (previousBeaconMs_ == 0 || currentMs - previousBeaconMs_ >= aprsBeaconPeriodSeconds_ * 1000 || requirePeriodicBeacon ) {   
       if( LDH_RX_Mode == 1 ) return ; 
       requirePeriodicBeacon = false;
@@ -308,6 +319,17 @@ void Service::sendPeriodicBeacon(){
             };
          aprsBeacon_.replace("GPS_LAT", (char *)&slat);  // LocationManager guarantes that this data are always available and valid for a spot
          aprsBeacon_.replace("GPS_LON", (char *)&slon);
+         APRS_MsgSN++; if ( APRS_MsgSN >= 99) APRS_MsgSN = 0;  // increment APRS beacon sequence number
+         aprsBeacon_.replace("BLK_TAG", String(APRS_BlkTag) );
+         aprsBeacon_.replace("SQN_NBR", String(APRS_MsgSN) );
+       
+         if(APRS_MsgSN == 5 ) {
+           aprsBeacon_.replace("APRS_WC", APRS_WCtag.c_str() );
+           } 
+         else {
+           aprsBeacon_.replace("APRS_WC", "" );
+           } ;
+
          xSemaphoreGive(LocationManager_mutex_v);  // release mutex 
 
          // create beacon payload based on device configuration
@@ -315,23 +337,23 @@ void Service::sendPeriodicBeacon(){
          String signalReport ="";
          if(EncapType == 1){
             signalReport = String(" (") +
-            String(LoRa_DutyCycle)+
-            String(" ") +
+//            String(LoRa_DutyCycle)+
+//            String(" ") +
             String(NodeName.c_str()) + 
-            String(" Beacon ") +
-            String(" ") + 
-            String(cpu_temp) +
+//            String(" Beacon ") +
+//            String(" ") + 
+//            String(cpu_temp) +
             String(")") ;
             }
          else if(EncapType == 2){
             signalReport = String(" (") +
-            String(LoRa_DutyCycle)+
-            String(" ") +
+//            String(LoRa_DutyCycle)+       // REMOVED 20230507 BY i8fuc 
+//            String(" ") +
             String(NodeName.c_str()) + 
-            String(" Beacon_OE ") +
-            String(" ") +
-            String(cpu_temp)+
-            String(")") ;        
+//            String(" Beacon_OE ") +        // removed 20230507 by I8FUC
+//            String(" ") +
+//            String(cpu_temp)+
+            String(")") ;   
             };  
 
          if( PayloadStyle == 1){
@@ -352,12 +374,16 @@ void Service::sendPeriodicBeacon(){
                debugA("To_LoRa (420) ==> [%s]\n",(payload.ToString()).c_str());
                if(syslog_available) syslog.logf(LOG_INFO, "sendPeriodicBeacon: To_LoRa (420) ==> [%s] ", (payload.ToString()).c_str() );
                };
-            display_event = 6 ;   // display event on local display    
-            bool ret = sendToLora(payload, true , true );   // send packet with random  delay and skip if needed was as soon as possible 20220214 by MF
+            display_event = 6 ;   // display event on local display  
+            // 20230515 by MF removed the random delay to better cope with AgileBeaconing
+//            bool ret = sendToLora(payload, true , true );   // send packet with random  delay and skip if needed was as soon as possible 20220214 by MF
+            bool ret = sendToLora(payload, false , true );   // send packet without random  delay and skip if needed was as soon as possible 20220214 by MF
+
             if(APRS_debug && ret)debugA("--> sendPeriodicBeacon: Periodic beacon sent\n");
             }
          else {
             if(APRS_debug)debugA("--> sendPeriodicBeacon: Beacon payload is invalid\n");
+            display_event = 16 ;   // display event on local display    
             }
          previousBeaconMs_ = currentMs - random(0, 2000);
       };
@@ -468,10 +494,10 @@ void Service::onAprsisDataAvailable() {
             };
          bool ret;
          if(Beacon_Mode ){      
-            ret = sendToLora(payload, false , false );   // send message to loRa without random delay in Beacon Mode
+            ret = sendToLora(payload, false , true );   // send message to loRa without random delay in Beacon Mode
             }
          else{
-            ret = sendToLora(payload, true , false );   // send message to loRa with random delay      
+            ret = sendToLora(payload, true , true );   // send message to loRa with random delay      
             };
          if (ret) { 
             AprsIS_relayed_packets++ ;
@@ -496,13 +522,24 @@ bool Service::sendToLora(const AX25::Payload &payload, bool rndDelay, bool SkipI
    byte LoRa_buf[1024];
    int bytesWritten;
   
+   if(APRS_debug)  debugA("====> sendToLora (2023-in)  ==> [%s]\n",(payload.ToString()).c_str()); 
+//   payload.fromString(payload.ToString() + signalReport);   // add our passtag to the packet to be relayed or transferred to aprs-is
+
+   String aprsis_packet = payload.ToString() ;   
+   String cmessage = APRS_Compress(aprsis_packet) ;
+   AX25::Payload cpayload(cmessage);
+
+//   payload.fromString(aprsis_packet);
+
+   if(APRS_debug)  debugA("====> sendToLora (2023-out) ==> [%s]\n",(cpayload.ToString()).c_str()); 
+
    if(EncapType == 1 ){   // AX25 packet encapsulation
-      bytesWritten = payload.ToBinary(LoRa_buf, sizeof(LoRa_buf));
+      bytesWritten = cpayload.ToBinary(LoRa_buf, sizeof(LoRa_buf));
       if(APRS_debug) debugA("\r  ---->  sendToLora_AX25: bytesWritten = %d - EncapType = %d\r", bytesWritten, EncapType); 
       } 
    else if(EncapType == 2 ){ // OE_Style packet encapsulation
-      sprintf((char *)LoRa_buf,"%c%c%c%s",'<',0xFF, 0x01, (payload.ToString()).c_str());
-      bytesWritten = (payload.ToString()).length() + 3;
+      sprintf((char *)LoRa_buf,"%c%c%c%s",'<',0xFF, 0x01, (cpayload.ToString()).c_str());
+      bytesWritten = (cpayload.ToString()).length() + 3;
       LoRa_buf[bytesWritten] = '\0';
       if(APRS_debug) debugA("---->  sendToLora_OE: bytesWritten = %d - EncapType = %d ", bytesWritten, EncapType);     
       };
@@ -813,99 +850,6 @@ void Service::onLoraDataAvailable(uint8_t *rxBuffer , int packetSize, String sig
          }; // end of !isClient_ 
       }       // end of APRS_OE_Style LoRa packet
 
-   // Following is the APRS434 packet format received  ... still to be decided if to implement somethinh 
-   /*
-   else if ( (rxBuf[0] == '<') && (rxBuf[1] == 0xFF) && (rxBuf[2] == 0x01)  ) {     //  APRS_OE_Style LoRa packet
-      rxBufIndex-- ;   // by MF 20220130
-      rxBuf[rxBufIndex ]='\0';        
-      OE_Packet =  (char *)rxBuf;  OE_Packet = OE_Packet.substring(3);
-      //  OE_Packet = OE_Packet.substring(0, OE_Packet.length() - 1); // 20211116 by MF
-      if(APRS_debug) debugA("onLoraDataAvailable: ---789---->   OE_Packet received= [%s]\n\r",OE_Packet.c_str() );
-      // String OE_textPayload = addSignalReport_ ? signalReport : String();
-      String OE_textPayload = "";
-      // debugA("LoRa packet received => textPayload=["); payload.Dump(); debugA("signalReport: "); debugA(signalReport);debugA("]\r");
-      // debugA("  From_LoRa_OE     <== [%s]\n",(OE_Packet + signalReport ).c_str());
-      if(APRS_debug) debugA("From_LoRa_OE     <== OE_Packet=[%s]  signalReport=[%s] \n",OE_Packet.c_str(), signalReport.c_str());
-      // write to FRAM log the received LoRa packet and send spot message to sarimesh server
-      send_log_msg(OE_Packet, signalReport, my_spot);   // send to spot log server  tag 2
-      if (isClient_) {  // just send the new packet to the KISS interface
-         AX25::Payload AX25_payload(OE_Packet);   // create a standard payload in AX.25 format to be transferred to KISS host
-         if (AX25_payload.IsValid()) {  //  APRS_AX25_Style LoRa packet
-            if(APRS_debug) debugA("----AX25_payload ------->  valid AX25 payload created = [%s]\r",AX25_payload.ToString().c_str() );
-            int new_buf_len= AX25_payload.ToString().length(); 
-            byte new_buf[new_buf_len+1];
-            AX25_payload.ToBinary( new_buf ,new_buf_len );                 
-            kissForwardPacketFromLoRa( (uint8_t *)new_buf , new_buf_len );   // send new lora OE_packet transformed in AX.25 to KISS interface
-            };
-         return ;
-         }
-      else { //  !isClient_ futher processing ..... 
-         // this is the "what to do with the received LoRa payload" task...
-         if(local_is_CRC_Errored){ 
-            debugA("--> Discarding  CRC_Errored packet= [%s]\r", OE_textPayload.c_str());
-            return ; 
-            }; // no further actions for CRC errored packets
-         if( (OE_Packet.indexOf("LoRa") < 0 ) || ( OE_Packet.indexOf("qAS") > 0 )) {
-            debugA("--> IsRelayedAprsIs: skipping APRS-IS relayed payload or LoRa repeated packets  [%s] - [%s]\r", OE_Packet.c_str(), OE_textPayload.c_str());
-            return;
-            } ;
-         // it is a valid APRS_OE payload;  add received rssi and snr values
-         OE_Packet.replace("\n","");  // fix "\n" in the packet  
-         // fix  APLT00-1 OE_style destination to include WIDE1-1 in order to allow routing from a standard iGate repeater algoritm
-         if(( OE_Packet.indexOf("APLT00-1") >= 0 ) && ( OE_Packet.indexOf("APLT00-1,WIDE1") < 0 ) )  {
-            // perform APLT00-1 enforcement to APLT00-1,WIDE1-1
-            if(APRS_debug) debugA("<==== performing  APLT00-1 fixing: OE_Packet= %s\r",OE_Packet.c_str() );
-            OE_Packet.replace("APLT00-1","APLT00-1,WIDE1-1");
-            if(APRS_debug) debugA("====> performing  APLT00-1 fixing: OE_Packet= %s\r",OE_Packet.c_str() );
-            };
-         if(( OE_Packet.indexOf("APLG01") >= 0 ) && ( OE_Packet.indexOf("APLG01,WIDE1") < 0 ) )  {
-            // perform APLG01-1 enforcement to APLG01,WIDE1-1
-            if(APRS_debug) debugA("<==== performing  APLG01-1 fixing: OE_Packet= %s\r",OE_Packet.c_str() );
-            OE_Packet.replace("APLG01","APLG01,WIDE1-1");
-            if(APRS_debug) debugA("====> performing  APLG01 fixing: OE_Packet= %s\r",OE_Packet.c_str() );
-            };
-         //  payload.fromString(OE_Packet + signalReport);   // create a standard payload and add our passtag to the packet to be relayed or transferred to aprs-is
-         payload.fromString(OE_Packet);   // create a standard payload and add our passtag to the packet to be relayed or transferred to aprs-is
-         // if(APRS_debug) debugA("onLoraDataAvailable: ====== AprsLoginRep= %s =====> OE_Packet: ownCallsign_= %s - textPayload= [%s]\r", AprsLoginRep.c_str(), ownCallsign_.ToString().c_str(), OE_textPayload.c_str() );
-         if (payload.Digirepeat(ownCallsign_)  ) {
-            if(APRS_debug) debugA("\ronLoraDataAvailable:  -------> payload after Digirepeat = [%s]\r",payload.ToString().c_str() );         
-#ifndef APRS_IS_DISABLE
-            if (enableRfToIs_  ) {  //  we are an iGate ... try to relay to APRS-IS by filtering payload
-               if( (payload.ToString()).indexOf("FromInt") > 0  ) { 
-                  if(APRS_debug) debugA("Disposition: --> IsAprsIsOriginated; not sending to APRS-IS: %s\r",(payload.ToString()).c_str());
-                  }
-               else {
-                  if( PayloadStyle == 1){
-                     sendToAprsis( payload.ToString());  // pure_OE_style  no path tracing at all
-                     }
-                  else{
-                     sendToAprsis( payload.ToString() + signalReport);
-                     };
-                  if(APRS_debug) debugA("Disposition: ==> Packet sent to APRS-IS\r");
-                  };
-               };
-#endif
-            if( PayloadStyle == 1){
-               payload.fromString(payload.ToString());   // add our passtag to the packet to be relayed or transferred to aprs-is
-               }
-            else{
-               payload.fromString(payload.ToString() + signalReport);   // add our passtag to the packet to be relayed or transferred to aprs-is
-               };
-
-            if ((enableRepeater_ ) && (RepeaterOperation == 0 )){
-               if(APRS_debug) debugA("onLoraDataAvailable: Disposition: ==> Packet sent to APRS-IS\r");
-               vTaskDelay(pdMS_TO_TICKS(100));
-               bool ret= sendToLora(payload, true , false);   // try to relay received packet to LoRa if this is required and filter payload 
-               if(ret){if(APRS_debug)  debugA("  To_LoRa_OE (628) ==> [%s]\n",(payload.ToString()).c_str());  };
-               if((APRS_debug)&& (ret))debugA("onLoraDataAvailable: Disposition => Packet digirepeated \r");
-             };
-            }
-         else{
-            if(APRS_debug) debugA("onLoraDataAvailable: Disposition => Packet NOT digirepeated: ownCallsign_= %s - payload= [%s]\r", ownCallsign_.ToString().c_str(), payload.ToString().c_str() );
-            };
-         }; // end of !isClient_ 
-      }       // end of APRS_OE_Style LoRa packet
-   */
    else {   // this should never happen here... BTW just in case report this event
       if(LoRa_debug) debugA("onLoraDataAvailable: Disposition => Invalid or unsupported payload from LoRa: assume native LoRa packet \r");
       handle_nativeLoRaPacket(rxBuf, rxBufIndex, rssi, lora_snr, frequencyError);
@@ -1049,7 +993,7 @@ void Service::onBtDataAvailable() { // this is executed only in KIss mode... so 
                         if(APRS_debug) debugA("---->  sendToLora: bytesWritten = %d - EncapType = %d ", bytesWritten, EncapType);     
                         };        
                      LoRa_buf[bytesWritten] = '\0';
-                     sendToLoraRaw((uint8_t * )LoRa_buf, bytesWritten , false , EncapType );
+                     sendToLoraRaw((uint8_t * )LoRa_buf, bytesWritten , true , EncapType );
                      };
                   kissResetState();
                   }

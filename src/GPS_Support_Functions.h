@@ -57,15 +57,35 @@ extern String lat_now ; // present GPS location in String format
 extern String lon_now ;  
 extern char slat[];    // present GPS location in APRS formatas char arrays
 extern char slon[];   
-extern float homelat , homelon ;   // aux data 
+extern double homelat , homelon , homealt, homecourse, homespeed ;   // aux data 
 extern uint32_t GPSBaud ;
 extern int MAX_SATELLITES ;
-static void smartDelay(unsigned long ms);
+static void AgileDelay(unsigned long ms);
 static void printFloat(float val, bool valid, int len, int prec);
 static void printInt(unsigned long val, bool valid, int len);
 static void printStr(const char *str, int len);
 static void printDateTime_gps(TinyGPSDate &d, TinyGPSTime &t);
+extern volatile uint8_t AgileBeaconing ;
+extern long volatile lastBeaconMs  ;  // last beacon time in msecs beacon was sent 
+extern double volatile last_GPS_BLat  ;
+extern double volatile last_GPS_BLon  ;
+extern double volatile last_GPS_BCourse  ;
+extern double volatile last_GPS_BSpeed  ;
+extern double volatile last_GPS_BAltitude  ;
+extern String APRS_BlkTag ;
+extern volatile bool requirePeriodicBeacon;
+extern long aprsBeaconPeriodmSecs  ; 
+extern volatile uint8_t display_event  ;  // triggers real display update
+extern volatile bool gps_debug ;
+extern bool LoRa_debug ;
+extern volatile bool LoRa_initialized ;
+extern volatile bool APRS_Service_initialized  ;
+extern volatile byte BlackList ;
+extern String GPS_TimeDate ;
 
+
+
+void AgileBeacon();  // perform Agile beaconing functions
 void LocationManager( void * pvParameters );    //LocationManager: task to keep updated location data available
 void gps_dump();
 void gps_status();
@@ -79,5 +99,7 @@ void getGPSdata();
 void gps_setup();
 void gps_loop();
 void gps_detect();
+void getGPS_TimeDate(void);
+
 
 #endif

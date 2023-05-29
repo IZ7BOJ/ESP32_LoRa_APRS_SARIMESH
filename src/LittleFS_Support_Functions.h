@@ -5,6 +5,8 @@
 #include "rdbg.h"
 #include "FS.h"
 #include <LittleFS.h>
+#include "boards.h"
+#include "utilities.h"
 
 #define FORMAT_LITTLEFS_IF_FAILED true
 

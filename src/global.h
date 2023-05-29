@@ -15,6 +15,12 @@ extern FRAM fram;
 
 #include "GUI/PAGES_Includes.h"
 
-extern byte packetBuffer[ NTP_PACKET_SIZE]; 
+extern byte packetBuffer[ NTP_PACKET_SIZE];
+extern volatile byte LocationCompression ;
+
+extern volatile byte BlackList ;
+
+extern volatile uint8_t AgileBeaconing ; 
+extern String APRS_WCtag  ;
 
 #endif

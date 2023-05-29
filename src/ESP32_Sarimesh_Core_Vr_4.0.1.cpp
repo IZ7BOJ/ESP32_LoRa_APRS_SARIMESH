@@ -1,5 +1,5 @@
-/* ESP32_LoRa_Radiolib_Beacon.ino  vr. 3.0.x
- * Last updated 20220111 by MF
+/* ESP32_Sarimesh_Core  vr. 4.1.0
+ * Last updated 20230515 by MF
  * 
  * 
  * 
@@ -83,6 +83,7 @@ volatile bool LoRaManager_flag = false ;             // handles low level LoRa d
 volatile bool BeaconController_flag = false ;        // controls beacon send/receive functionalities
 volatile bool MQTT_Manager_flag = false ;            // controls MQTT send/receive functionalitie
 
+volatile bool is_at_defaults = false ;
 #ifdef FORCE_DEFAULTS                   // if true force default configuration 
   bool force_config_init = true ;
 #else
@@ -350,6 +351,7 @@ IPAddress ap_subnet(255,255,255,0) ;
 // **********************  SPI  devices support *******************
 #include <SPI.h>
 
+
 //**************************** support for OLED and TFT display  *************************
 #include <Adafruit_GFX.h>    // Core graphics library
 #include <Fonts/FreeMonoBoldOblique12pt7b.h>
@@ -401,6 +403,7 @@ IPAddress ap_subnet(255,255,255,0) ;
         //  #include "OLED_test_case.h"
   #endif
 #endif   // OLED_MOD
+void OLED_Reset(void) ;
 
 //***************************************** SD card support  **************************
 #ifdef SD_MOD
@@ -505,7 +508,6 @@ IPAddress ap_subnet(255,255,255,0) ;
   SX1268 lora_2g = new Module(L_SS, L_DI0, L_RST,L_BUSY);
   SX1278 lora_1g = new Module(L_SS, L_DI0, L_RST,L_BUSY);
 
-
   // ********************************** loraprs app support *************************************
   #include "loraprs_config.h"
   #include "loraprs_service.h"
@@ -561,7 +563,7 @@ void setup(){
 #endif
 
   //******************************* Load default HW_Device_Configuration ****************************
-  HW_Set_SARIMESH(); // always try to start with our default HW device configuration
+  HW_Set_Defaults(); // always try to start with our default HW device configuration
   show_HW_Device_Config() ;
 
 #ifdef DEBUG_DISABLED
@@ -644,8 +646,11 @@ if(buzzer_pin){
   };
 
 //*********************  init I2C wire.h driver and try to pre-init OLED display  *******************
+OLED_Reset() ;           // perform OLED display reset if needed
+
 // try to initialize I2C bus 
 Wire.setClock(100000L);
+
 i2c_initialized = false  ; int i2cDevices=0 ; hw_arch=0 ;//  try pin pairs 4,15 or 21,22 
 Wire.begin(i2c_sda, i2c_scl); 
 I2C_Scanner() ;
@@ -684,6 +689,11 @@ Serial.println(xPortGetCoreID());
 //************************** init EEPROM based configuration  *************************
   EEPROM.begin(512);  // open EEPROM storage holding the device configration infos
 
+//************************* init SPI bus *********************************************
+
+//    SPI.begin(5,19,27);
+SPI.begin(L_SCK, L_MISO, L_MOSI);
+
 //*************** disable all possible conflicting pins on SPI bus *****************
 #ifdef W5500_MOD
   pinMode(W5500_RST, OUTPUT);      // reset for ethernet W5500
@@ -697,6 +707,7 @@ Serial.println(xPortGetCoreID());
   digitalWrite(lora_cs, HIGH);
 #endif
 
+
 #ifdef TFT_MOD
   pinMode(TFT_CS, OUTPUT);      // CS for SPI display - 1 CS disable
   digitalWrite(TFT_CS, HIGH);
@@ -704,12 +715,15 @@ Serial.println(xPortGetCoreID());
   digitalWrite(TFT_DC, LOW);
 #endif
 
+
 #ifdef SD_MOD
   pinMode(SD_CS, OUTPUT);      // CS for SD Card - 1 CS disable
   digitalWrite(SD_CS, HIGH);
   pinMode(SD_RST, OUTPUT);      // CS for SD Card - 1 CS disable
   digitalWrite(SD_RST, HIGH);     
 #endif
+
+
 
 //******************** init driver for PCF8574 port expander connected devices ***************************
 if(has_PCF8574){                                     // setup port expander
@@ -844,12 +858,14 @@ Serial.println("--------------> Close wait_default_config time window \r");
 //******************** load or initialize device configuration from FRAM or LittleFS ***************************
 // if no config is found a default config is loaded: hence after this step a valid configuration should be always available.
 
-// force_config_init= true ; // to test forcing default configuration
+force_config_init= false ; // to test forcing default configuration 
 if (LoadConfig( force_config_init ) == false) Serial.print("Failed loading Device configurations: forced default configuration\r\n");
 
 // assuming AprsLogin from the device configuration as official NodeName
 NodeName = ESP_Config.AprsLogin ;
-
+if(NodeName == "I1XYZ-10"){
+   is_at_defaults = true ;
+  }
 //DisplayConfig_serial(); 
 Serial.print("We should have here a valid configuration... either the default or the custom one.... \r\n");  
     
@@ -913,16 +929,17 @@ if( has_FM24W256 ){
       else { 
         display.begin(&Adafruit128x64, oled_addr);
       };
-      display.displayRemap(true);
+//      display.displayRemap(true);
       //  display.setFont(X11fixed7x14);
+      if(oled_orient  != O_FLIPSCREEN ){ display.displayRemap(false); } else { display.displayRemap(true); };
       display.setFont(Arial14);
       display.setContrast(200);
       display.clear();
-      display.setRow(1); 
+      display.setRow(2); 
       display.println("        Welcome to");  
-      display.setRow(3);
-      display.println("Esp32 LoRa Beacon ");  
-      display.setRow(5);
+      display.setRow(4);
+      display.println("  Esp32 LoRa Beacon ");  
+      display.setRow(6);
       display.println("       by SARIMESH");
     #else   // Adafruit OLED SSD1306 library
       if(oled_rst){                      // For Heltec WiFi LoRa 32 
@@ -938,7 +955,7 @@ if( has_FM24W256 ){
       display.setTextWrap(false);
       display.setFont(&Basic_Comical_Regular_NC7pt7b);
       display.clearDisplay();
-      if(oled_orient){ display.setRotation(2); } else { display.setRotation(0); };
+      if(oled_orient != O_FLIPSCREEN ){ display.setRotation(0); } else { display.setRotation(2); };
       display.dim(false);
       display.setTextColor(WHITE);
       display.setTextSize(1);
@@ -957,14 +974,16 @@ if( has_FM24W256 ){
   if(has_SSD1306){
     #ifdef USE_SSD1306_ASCII_LIB   // uses task2 for loop: disabled  uncommento to re-inable
       display.clear();
-      display.setRow(1);
+      if(oled_orient  != O_FLIPSCREEN ){ display.displayRemap(false); } else { display.displayRemap(true); };
+//      display.displayRemap(false);
+      display.setRow(2);
       display.println( VersionBanner.c_str()); 
-      display.setRow(4);
-      display.println("        Booting...."); 
+      display.setRow(5);
+      display.println("            Booting...."); 
     #else   // Adafruit OLED SSD1306 library
       display.clearDisplay(); display.display();
       display.setTextWrap(false);
-      if(oled_orient){ display.setRotation(2); } else { display.setRotation(0); };
+      if(oled_orient  != O_FLIPSCREEN ){ display.setRotation(0); } else { display.setRotation(2); };
       display.setTextColor(WHITE);
       display.setFont(&Basic_Comical_Regular_NC6pt7b);        
       display.setCursor(0, 30); display.print( VersionBanner.c_str()); 
@@ -977,37 +996,36 @@ if( has_FM24W256 ){
 
 //*********************************** TFT DISPLAY HW  setup  *******************
 #ifdef TFT_MOD
+  has_ST77XX = true ;
   #ifdef USE_ADAFRUIT_TFT_LIB
     Serial.print( "Using ADAFRUIT_SPI_TFT LIB\r\n" );
   #else
     Serial.print( "Using TFT_eSPI LIB\r\n" );
   #endif
 
-  if(has_ST77XX){
-    #ifdef USE_ADAFRUIT_TFT_LIB     // using USE_ADAFRUIT_TFT_LIB
-      tft.init(135, 240);           // Init ST7789 240x135
-      tft.fillScreen(ST77XX_BLACK);
-      //  tft.setFont(&FreeMono9pt7b);
-      tft.setFont(&Basic_Comical_Regular_NC12pt7b);
-      //  tft.setFont();
-      tft.setRotation(1);
-      tft.fillScreen(ST77XX_BLACK);
-      //  tftPrintTest();
-      tft.setCursor(0, 0); 
-      //  tft.setTextFont(GFXFF);
-      //  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-      tft.setTextColor(ST77XX_GREEN);
-      tft.setCursor(0, 30); tft.print("         Welcome to");
-      tft.setCursor(0, 60); tft.print("   Esp32 LoRa Beacon ");
-      tft.setCursor(0, 90); tft.print("       by SARIMESH");
-    #else          //  Using TFT_eSPI LIB
-      tft.init(); 
-      tft.setRotation(3);
-      tft.loadFont(Final_Comics_18);  
-      digitalWrite(25, HIGH);
-      tft.fillScreen(TFT_BLACK);
-    #endif
-  };  // end of has_ST77XX
+  #ifdef USE_ADAFRUIT_TFT_LIB     // using USE_ADAFRUIT_TFT_LIB
+    tft.init(135, 240);           // Init ST7789 240x135
+    tft.fillScreen(ST77XX_BLACK);
+    //  tft.setFont(&FreeMono9pt7b);
+    tft.setFont(&Basic_Comical_Regular_NC12pt7b);
+    //  tft.setFont();
+    tft.setRotation(1);
+    tft.fillScreen(ST77XX_BLACK);
+    //  tftPrintTest();
+    tft.setCursor(0, 0); 
+    //  tft.setTextFont(GFXFF);
+    //  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.setTextColor(ST77XX_GREEN);
+    tft.setCursor(0, 30); tft.print("         Welcome to");
+    tft.setCursor(0, 60); tft.print("   Esp32 LoRa Beacon ");
+    tft.setCursor(0, 90); tft.print("       by SARIMESH");
+  #else          //  Using TFT_eSPI LIB
+    tft.init(); 
+    tft.setRotation(3);
+    tft.loadFont(Final_Comics_18);  
+    digitalWrite(25, HIGH);
+    tft.fillScreen(TFT_BLACK);
+  #endif
 
   vTaskDelay(pdMS_TO_TICKS(3000)); // let's display our banner for few seconda!
 
@@ -1393,6 +1411,7 @@ cpu_temp = temperatureRead();
   debugA("print_temperature: starting periodic check (60 sec).... \r");
   tk30Second.attach(60,print_temperature);
 #endif
+
 
 // let's start the LocationManager and flag for gps_fix_static
 if(has_GPS && ! no_gps) {

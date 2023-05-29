@@ -77,7 +77,7 @@ extern char RTCdatestring[20];
 extern volatile int resync_counter;            // used for RTC resync with remote NTP server
 extern volatile int resync_counter_trsh ;     // used for RTC resync with remote NTP server
 
-bool HW_Set_SARIMESH(void);
+bool HW_Set_Defaults(void);
 void show_HW_Device_Config(void);
 void show_HW_Device_Config_Serial(void);
 

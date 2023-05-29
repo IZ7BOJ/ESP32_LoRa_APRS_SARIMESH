@@ -91,6 +91,12 @@ if( has_FM24W256 ){
   fram.write8(204,ESP_Config.pps_debug);
   fram.write8(205,ESP_Config.PE_debug);
   fram.write8(982,ESP_Config.BT_KISS_Mode);
+  fram.write8(983,ESP_Config.LocationCompression);
+  fram.write8(984,ESP_Config.AgileBeaconing);
+  fram.write8(985,ESP_Config.BlackList);
+
+
+
   fram.write8(207,ESP_Config.Serial_KISS_Mode);
   
   fram.write8(208,ESP_Config.mqtt_enable);
@@ -211,8 +217,12 @@ if( has_FM24W256 ){
 
 bool ReadConfig(void )
 {
-  char str[64]; 
+  char str[64];
+
+Serial.printf("ReadConfig: try reading configuration from FRAM or Flash...\r\n");
+
 #ifdef GET_CONFIG_FROM_FRAM 
+Serial.printf("ReadConfig: found request for getting  configuration from FRAM ...\r\n");
 
 if( has_FM24W256 ){     
   Serial.println("Reading Device Configuration from FRAM");
@@ -370,6 +380,11 @@ if( has_FM24W256 ){
     ESP_Config.gps_tx = fram.read8(972);
     ESP_Config.PayloadStyle = fram.read8(973);
     ESP_Config.RepeaterOperation = fram.read8(975);
+    ESP_Config.LocationCompression = fram.read8(983);
+    ESP_Config.AgileBeaconing = fram.read8(984);
+    ESP_Config.BlackList = fram.read8(985);
+ 
+
 
     ESP_Config.V5_ena = fram.read8(976);
     ESP_Config.V24_1_ena = fram.read8(977); 
@@ -381,7 +396,7 @@ if( has_FM24W256 ){
     
     }   // end of check of CFG tag in FRAM
   else {   // no configuration TAG is in the FRAM so config is invalid
-    Serial.println("Configurarion NOT FOUND!!!!");
+    Serial.println("FRAM Configuration NOT FOUND or invalid!!!!");
     int cntr=30 ;
     Serial.print("\n\rDevice configuration non found: forcing defaults... ");      
     while (cntr-- > 0){
@@ -393,8 +408,10 @@ if( has_FM24W256 ){
   }  // end of Config from FRAM case  if FRAN is equipped
 else {  // just in case it is not equipped just fallback on flash storage
   // no FRAM available... so try loading config from flash FS
+  Serial.printf("ReadConfig: FRAM not available ... getting  configuration from Flash ...\r\n");
+
   if(  ! loadConfigurationFromFlash("/WebConf.conf")) {   // load config from LittleFS
-    Serial.println("Configurarion NOT FOUND in flash!!!!");
+    Serial.println("Configurarion NOT FOUND in flash 2 !!!!");
     int cntr=30 ;
     Serial.print("\n\rDevice configuration non found: forcing defaults... ");      
     while (cntr-- > 0){
@@ -406,8 +423,10 @@ else {  // just in case it is not equipped just fallback on flash storage
  }; 
 #else
   // no FRAM available... so try loading config from flash FS
+  Serial.printf("ReadConfig: found request for getting  configuration from Flash FS ...\r\n");
+
   if(  ! loadConfigurationFromFlash("/WebConf.conf")) {   // load config from LittleFS
-    Serial.println("Configurarion NOT FOUND in flash!!!!");
+    Serial.println("Configurarion NOT FOUND in flash 2 !!!!");
     int cntr=30 ;
     Serial.print("\n\rDevice configuration non found: forcing defaults... ");      
     while (cntr-- > 0){
@@ -442,10 +461,19 @@ String textToBeaconProto( String BeaconText ) {
   String(">APLS01,") + strings[1]  + String(":!")+ 
   String("GPS_LAT")+ strings[4] +    // change this to alter APRS symbol table
   String("GPS_LON")+ strings[3]+ 
-  strings[2] +             // this is our magic tag
-  String(" Bw")+ ESP_Config.LoraBw + 
-  String("Sf")+ ESP_Config.LoraSf + 
-  String("Cr")+ ESP_Config.LoraCodingRate  ;
+//  strings[2] +             // this is our magic tag LoRa
+  String("LoRa")+       // placeholder for the sequencenumber
+  String(" BLK_TAG")+       // placeholder for the blasklisted tag
+  String("SQN_NBR")+       // placeholder for the sequencenumber
+  String("APRS_WC") ;     // placeholder for the APRS_WC
+
+
+  APRS_WCtag = "" +
+  String("B")+ ESP_Config.LoraBw + 
+  String("S")+ ESP_Config.LoraSf + 
+  String("C")+ ESP_Config.LoraCodingRate + 
+  String("P")+ ESP_Config.LoraPreambleLen ;
+
   // if(LoRa_debug) debugA("textToBeaconProto output ==============> %s \r",output.c_str() );
   return (output);
 }
@@ -527,6 +555,11 @@ void UpdateLocalConfigData(void ){
   PayloadStyle= ESP_Config.PayloadStyle;
   RepeaterOperation= ESP_Config.RepeaterOperation;
   EncapType=ESP_Config.EncapType ;
+  LocationCompression = ESP_Config.LocationCompression;
+  BlackList = ESP_Config.BlackList;
+
+  AgileBeaconing = ESP_Config.AgileBeaconing;
+
  
 #endif //  LORA_FUNCTIONS_ENABLE 
    ps_debug= ESP_Config.ps_debug;
@@ -845,7 +878,6 @@ bool DisplayConfig(void ) {
   debugA("ESP_Config.BeaconFreq  = %dd \r", ESP_Config.BeaconFreq );  
   debugA("ESP_Config.BeaconPower = %d \r", ESP_Config.BeaconPower );  
   debugA("ESP_Config.BeaconWorkConditions  = %d \r", ESP_Config.BeaconWorkConditions );  
-
   debugA("End of Configuration data\r");
   debugA("\r=========>DHCP acquired data<==========");
   debugA("%s\r" ,String("localIP:    " + (String) WiFi.localIP()[0] + "." +  (String) WiFi.localIP()[1] + "." +  (String) WiFi.localIP()[2] + "." + (String) WiFi.localIP()[3]).c_str());
@@ -1006,8 +1038,11 @@ void loop_global(){
 
 bool LoadConfig( bool force_defaults ){
   // load or initialize device configuration from FRAM or LittleFS
+  Serial.printf("LoadConfig:  Start searching device configuration from FRAM or Flash...\r\n");
+
   bool needs_loading_defaults = false;
   if ( force_defaults) {
+    Serial.printf("LoadConfig: found request for forced loading from FRAM or Flash...\r\n");
     needs_loading_defaults = true ;
     }
   else if (!ReadConfig()) {
@@ -1077,19 +1112,19 @@ bool LoadConfig( bool force_defaults ){
 #endif
         ESP_Config.iGate_Mode = 0;
         ESP_Config.Beacon_Mode = 0;
-        ESP_Config.Admin_Mode = 1;
+        ESP_Config.Admin_Mode = 0;         // 0 to startup in normal operation  1 to startup in admin mode
         ESP_Config.Reboot_Now = 0;
-        ESP_Config.Loc_Lat = "abcd.efN" ;
-        ESP_Config.Loc_Lon = "ghilm.noE" ;
+        ESP_Config.Loc_Lat = "4000.00N" ;
+        ESP_Config.Loc_Lon = "01300.00E" ;
         ESP_Config.AprsHost = "rotate.aprs2.net" ;
         ESP_Config.AprsPort = 14580;        
-        ESP_Config.AprsLogin = "aprs-is_userid_tbd" ;
-        ESP_Config.AprsPass = "aprs-is_pass_tbd";       
+        ESP_Config.AprsLogin = "I1XYZ-10" ;     // should be aprs-is_userid_tbd
+        ESP_Config.AprsPass = "aprs-is_pass_tbd";    // should be aprs-is_userid_tbd   
         ESP_Config.AprsFilter = "m/1" ;
-        ESP_Config.AprsRawBeaconIGATE = "I1XYZ-10,WIDE1-1,LoRa iGate,#,L";
-        ESP_Config.AprsRawBeaconTRACK = "I1XYZ-10,WIDE1-1,LoRa Tracker,#,L" ;
+        ESP_Config.AprsRawBeaconIGATE = "I1XYZ-10,WIDE1-1,LoRa,&,L";
+        ESP_Config.AprsRawBeaconTRACK = "I1XYZ-10,WIDE1-1,LoRa,&,L" ;
         ESP_Config.AprsRawBeaconPeriodSecondsIGATE = 1800;
-        ESP_Config.AprsRawBeaconPeriodSecondsTRACK = 301;
+        ESP_Config.AprsRawBeaconPeriodSecondsTRACK = 300;
         ESP_Config.AprsLoggerAddr = "192.168.2.150" ;
         ESP_Config.AprsLoggerPort = 44444;
         ESP_Config.IoT_Host = "io.adafruit.com" ;
@@ -1104,16 +1139,20 @@ bool LoadConfig( bool force_defaults ){
         ESP_Config.feed_6 = "para_6";
     
         ESP_Config.LoraFreq = "433.775";
-        ESP_Config.LoraBw = "125.00";
+        ESP_Config.LoraBw = "125";
         ESP_Config.LoraSf = 12;
         ESP_Config.LoraCodingRate = 8;
         ESP_Config.LoraSync = 0x12 ;  //  0x34=APRS 0x12=OE-Style
-        ESP_Config.LoraPower = 22;
+        ESP_Config.LoraPower = 15;
         ESP_Config.LoraFreqCorr = 0 ;
         ESP_Config.LoraPreambleLen = 10  ;
         ESP_Config.EncapType = 2  ;        // 0=native 1= APRS  2= OE-Style
-        ESP_Config.PayloadStyle = 1  ;        // 0=Sarimesh LoRa  1= Pure OE_Style  2= Modified OE_Style
+        ESP_Config.PayloadStyle = 0  ;        // 0=Sarimesh LoRa  1= Pure OE_Style  2= Modified OE_Style
         ESP_Config.RepeaterOperation = 1  ;        // 0=Sarimesh(enabled)  1= OE_Style(disabled)
+        ESP_Config.LocationCompression = 1 ;  // 0= disabled  1=enabled
+        ESP_Config.BlackList = 0 ;  // 0= disabled  1=enabled
+
+        ESP_Config.AgileBeaconing = 0 ;       // 0=disable != 0 enabled
         ESP_Config.BCN_LoRa_Vector = "0, 433.800, 10.4, 12, 8, 0x34, 22, -2, 10";
         ESP_Config.BCN_TimeSlotSync = 4  ;        // 
         ESP_Config.ps_debug = false  ; 

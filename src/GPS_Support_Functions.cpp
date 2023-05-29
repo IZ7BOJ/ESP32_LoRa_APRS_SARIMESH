@@ -274,7 +274,7 @@ static void printStr(const char *str, int len){
 }
 
 void displayGPS_TimeDate(){
-  debugA(">>GPS.DateTime: ");
+  debugA(">>GPS.TimeDate: ");
   if (gps.date.isValid()){ 
     Serial.print(gps.date.day());
     Serial.print("/");
@@ -306,6 +306,45 @@ void displayGPS_TimeDate(){
   Serial.print("\r\n");
 }
 
+
+void getGPS_TimeDate(void){
+ // debugA(">>getGPS_TimeDate: ");
+  String tempGPS_TimeDate="" ;
+  if (gps.date.isValid()){ 
+    tempGPS_TimeDate= tempGPS_TimeDate +
+    gps.date.day()+
+    String ("/") + 
+    gps.date.month()+
+    String("/")+
+    gps.date.year()+
+    String (" ") ;
+    }
+  else{
+    tempGPS_TimeDate= tempGPS_TimeDate + String("") ;
+    };
+
+  if (gps.time.isValid()){
+    if (gps.time.hour() < 10) tempGPS_TimeDate= tempGPS_TimeDate + String("0") ;
+    tempGPS_TimeDate= tempGPS_TimeDate + gps.time.hour() +
+    String(":");
+    if (gps.time.minute() < 10)  tempGPS_TimeDate= tempGPS_TimeDate + String("0") ;
+    tempGPS_TimeDate= tempGPS_TimeDate + gps.time.minute()+
+    String(":") ;
+    if (gps.time.second() < 10)  tempGPS_TimeDate= tempGPS_TimeDate + String("0") ;
+    tempGPS_TimeDate= tempGPS_TimeDate + gps.time.second() + 
+    String(".") ;
+    if (gps.time.centisecond() < 10)  tempGPS_TimeDate= tempGPS_TimeDate + String("0") ;
+    tempGPS_TimeDate= tempGPS_TimeDate + gps.time.centisecond() + String(" UTC");
+    }
+  else{
+    String("");
+    };
+  GPS_TimeDate = tempGPS_TimeDate ;
+}
+
+
+
+
 void displayGPS_Info(){
   Serial.print(">> Location: "); 
   if (gps.location.isValid()){
@@ -324,12 +363,23 @@ void displayGPS_Info(){
 void getGPSdata(){
   LastFunction = __func__ ; 
   // update present GPS position in string (lat_now,lon_now) , chararray (slat,slon) and decimal (homelat,homelon) global variables
+  // 20230514: added to gps data also course, speed and altitude values
   // Serial.print(gps.location.lat(), 6);Serial.print(",");Serial.println(gps.location.lng(), 6);
   if( !(xSemaphoreTake(LocationManager_mutex_v, ( TickType_t ) 2) )){ debugA("xSemaphoreTake FAILED: aborting getGPSdata"); return;  };
   
   if (gps.location.isValid()){  // we have a valid fix from the GPS engine update GPS readout !
-    float latnum = gps.location.lat(); homelat = latnum;
-    float lonnum = gps.location.lng(); homelon= lonnum; 
+    double latnum = gps.location.lat(); homelat = latnum;
+    double lonnum = gps.location.lng(); homelon= lonnum; 
+    if(gps.altitude.isValid() ) {
+      double altnum = gps.altitude.meters() ; homealt = altnum ;  // meters
+      };
+    if(gps.speed.isValid() ) {
+      double speednum = gps.speed.kmph() ; homespeed = speednum ;  // Kmph
+      };
+    if(gps.course.isValid() ) {
+      double coursenum = gps.course.deg() ; homecourse = coursenum ;  // degres
+      };
+
     gps_fix_available = 1 ; // flag that a GPS fix is available at moment
     }
   else{                              // GPS location fix is not valid at moment... get a workaround...
@@ -376,6 +426,8 @@ void getGPSdata(){
   // int gps_fix_available  ;          // 1--> a GPS fix is available ( either from gps or from manal setup) initialized as a trap to 1
   // if(gps_debug) debugA("gps_fix_available=%d - homelat=%8.5f - homelon=%8.5f - lat_now=%s - lon_now=%s -  slat=%s - slon=%s\r", gps_fix_available , homelat,homelon, lat_now.c_str(), lon_now.c_str(), slat, slon);
   // we can assume that a valid position is always reported irrelevant of possible unavailable GPS fix
+
+  getGPS_TimeDate();    // update GPS time 
 
   xSemaphoreGive(LocationManager_mutex_v);  // release mutex 
   return; 
@@ -457,8 +509,130 @@ void gps_loop(){
         LastFunction = __func__ + String("_Esp32Serial1.available") ;
         gps.encode(Esp32Serial1.read());
         };      // end of while  (Esp32Serial1.available() > 0) 
+      };
+    if( AgileBeaconing != 0) {        // check if Agilebeaconing has to be performed
+      AgileBeacon();                        // exec Agilebeaconing functionalities
       };   
 }
+
+/*
+  <option value="0">Disable</option> 
+  <option value="1">EventMode</option>
+  <option value="2">MappingModeCorse</option>
+  <option value="2">MappingModeDetailed</option>
+  <option value="2">MappingModeUltraFine</option>
+
+extern volatile uint8_t AgileBeaconing ;  // 
+extern long volatile lastBeaconMs  ;  // last beacon time in msecs beacon was sent 
+extern double volatile last_GPS_BLat  ;
+extern double volatile last_GPS_BLon  ;
+extern float volatile last_GPS_BCourse  ;
+extern float volatile last_GPS_BSpeed  ;
+extern float volatile last_GPS_BAltitude  ;
+*/
+
+//extern GPS_Tag  GPSBlackList[] ;
+
+struct GPS_Tag {
+  uint8_t id ;            // Tag Id  123
+  String Name ;           // Tag Name  Home
+  float Lat ;             // latitude: 40.645001916383 °
+  float Lon ;             // longitude: 14.409659618929 °
+  float radius ;            // radius in km  0.500
+}  ;
+
+
+
+GPS_Tag GPSBlackList[4] ={
+   {0,   String("home"),  40.54500191638,   14.30965961892, 300.0},     // radius in m
+   {1, String("site-1"),  40.64400,   14.40965, 26.0},
+   {2, String("site-2"),  40.64505,   14.40967, 50.0},
+   {3, String("site-3"),  40.64609,   14.40969, 9.0}
+   };
+
+
+
+
+void AgileBeacon(){ // perform Agile beaconing functions
+
+   LastFunction = __func__ ;
+   if( ! gps_fix_available ) { 
+//      if(gps_debug) debugA("AgileBeacon: skipping due to gps fix not jet available\r");          
+      return ;  // nothing to do if gps fix is not jet available
+      };
+
+   if(( ! LoRa_initialized ) || ( ! APRS_Service_initialized ) ){ 
+//      if(LoRa_debug) debugA("AgileBeacon: skipping due to lora and APRS not jet initialized \r");          
+      return ;  // nothing to do if lora is not jet initialized
+      };
+
+  uint8_t locAgileBeaconing = 0;
+  double deltameters = 0.0 ;
+  long deltatime = millis() - lastBeaconMs ;
+  //if(LoRa_debug) debugA("AgileBeacon: old beacon location...  last_GPS_BLat=%010.7f , last_GPS_BLon=%011.7f , last_GPS_BCourse=%5.1f, last_GPS_BSpeed=%5.1f , last_GPS_BAltitude=%5.1f  \r", last_GPS_BLat , last_GPS_BLon , last_GPS_BCourse, last_GPS_BSpeed , last_GPS_BAltitude );          
+  //if(LoRa_debug) debugA("AgileBeacon: saving new beacon location... homelat=%010.7f ,       homelon=%011.7f ,       homecourse=%5.1f,       homespeed=%5.1f ,            homealt=%5.1f  \r", homelat , homelon , homecourse, homespeed , homealt );          
+
+  uint32_t deltacourse = abs(int (homecourse - last_GPS_BCourse ) );
+  double distanceFromLastBlocation = TinyGPSPlus::distanceBetween( homelat, homelon, last_GPS_BLat, last_GPS_BLon ) ;
+
+  if( gps_fix_static ) { 
+    locAgileBeaconing = 4 ; 
+    }
+  else if(AgileBeaconing == 1 ) {    // event Mode .... 
+  //  if(LoRa_debug) debugA("AgileBeacon:  homelatdistanceFromLastBlocation=%7.3f , deltacourse=%d \r", distanceFromLastBlocation , deltacourse );          
+    if( (deltacourse > MIN_DELTA_COURSE ) && (deltacourse < 150) ) { locAgileBeaconing = 1 ; }  // send beacon immediately
+    else {
+      if( homespeed < TRS_SLOW_SPEED ) { locAgileBeaconing = 2 ; }
+      else if ( ( homespeed >= TRS_SLOW_SPEED ) && ( homespeed < TRS_MEDIUM_SPEED )  ) { locAgileBeaconing = 3 ; }
+      else if ( ( homespeed >= TRS_MEDIUM_SPEED ) && ( homespeed < TRS_HIGH_SPEED )  ) { locAgileBeaconing = 4 ; }
+      else { locAgileBeaconing = 5 ; } ;
+      } ;
+    }
+  else {                        // distance Modes
+    locAgileBeaconing = AgileBeaconing ;
+    };
+
+  if( locAgileBeaconing == 2 ) deltameters = 100.0 ;    // beacon time 12s@30kmph
+  if( locAgileBeaconing == 3 ) deltameters = 250.0 ;    // beacon time 30s@30kmph
+  if( locAgileBeaconing == 4 ) deltameters = 2500.0 ;   // beacon time 70s@130kmph
+  if( locAgileBeaconing == 5 ) deltameters = 20000.0 ;  // beacon time 560s@130kmph
+
+  if((last_GPS_BSpeed != 0.0) || (homespeed > 1.0)){
+    last_GPS_BSpeed = (9.0 * last_GPS_BSpeed + homespeed)/10.0 ;  // update lastbeacon speed to be the mobile average of last seen speed 
+    };
+  if( (last_GPS_BSpeed < 0.1 ) && (last_GPS_BSpeed != 0.0) ){    // euristic evaluation of stationary situation 
+    locAgileBeaconing = 1 ;  // send a beacon rigth now and stop  speed mobile average calculation
+    last_GPS_BSpeed = 0.0 ; 
+    };
+
+  if(( locAgileBeaconing == 1)  || (( deltameters > 0.0 ) &&  ( distanceFromLastBlocation > deltameters )  ) ||  ( deltatime > aprsBeaconPeriodmSecs) ) {
+    if( ( distanceFromLastBlocation > MIN_DELTA_DISTANCE ) &&  ( deltatime > MIN_DELTA_TIME ) ){
+      last_GPS_BLat = homelat ;
+      last_GPS_BLon = homelon ;
+      last_GPS_BCourse = homecourse;
+//    last_GPS_BSpeed = homespeed ;
+      last_GPS_BAltitude = homealt  ;
+      lastBeaconMs = millis() ;
+      APRS_BlkTag = "" ;
+      for (int blkltag=0; blkltag<4; ++blkltag) {
+        double distanceFromGPSTag = TinyGPSPlus::distanceBetween( homelat, homelon, GPSBlackList[blkltag].Lat, GPSBlackList[blkltag].Lon ) ;
+        if(LoRa_debug) { debugA("AgileBeacon: checking GPSBlackList[%d] --> Name=%s --> distanceFromGPSTag=%6.2f\r" , blkltag , GPSBlackList[blkltag].Name.c_str(), distanceFromGPSTag ); };      
+        if((distanceFromGPSTag <  GPSBlackList[blkltag].radius ) && ( BlackList == 1 )){
+          if(LoRa_debug) { debugA("AgileBeacon: we are in a blacklisted area... just avoid sending beacon...\r" ); };      
+          APRS_BlkTag = "-" ;
+//          return ;
+          };
+        };
+
+
+      if(LoRa_debug) debugA("\r\n\r\nAgileBeacon: sending new beacon... AgileBeaconing=%d , locAgileBeaconing=%d , distanceFromLastBlocation(m)=%6.2f, deltatime(msec)=%d , deltameters(m)=%6.2f , deltacourse(°)=%d \r", AgileBeaconing, locAgileBeaconing, distanceFromLastBlocation ,deltatime , deltameters ,deltacourse); 
+      display_event = 3 ;  // display send beacon now screen
+      requirePeriodicBeacon = true ;   // send beacon request
+      };
+    } ;
+}
+
+
 
 
 void gps_detect(){ // try to detect if GPS is equipped and working

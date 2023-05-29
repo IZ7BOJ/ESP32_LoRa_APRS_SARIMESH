@@ -152,6 +152,11 @@ class strConfig {
   uint8_t RebootTag ;
   byte PayloadStyle ;
   byte RepeaterOperation ;
+  byte LocationCompression ;
+  byte BlackList ;
+
+  uint8_t AgileBeaconing ;
+
 
   bool V5_ena; // 112
   bool V24_1_ena;

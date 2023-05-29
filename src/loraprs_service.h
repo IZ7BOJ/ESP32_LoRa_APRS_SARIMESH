@@ -62,6 +62,10 @@ extern volatile bool EnableRfToIs;
 extern volatile bool EnableIsToRf;
 extern volatile bool EnableRepeater;
 extern volatile bool APRS_Service_initialized ;
+extern uint8_t APRS_MsgSN ;
+extern String APRS_BlkTag ;
+extern String APRS_WCtag  ;
+
 
 extern String aprsBeacon_proto ;
 // extern LoraPrs::Config cfg;             // this global structure will keep all the relevant data related to the LORA_APRS application extern LoraPrs::Service loraPrsService; // this is the manager ol the LORA_APRS application
@@ -76,6 +80,11 @@ void PrintLoraPrsConfig();
 void PrintLoraPrsConfig_private();
 bool send_log_msg(String textPayload , String signalReport, String my_spot);
 void setupBeaconMode();
+
+String APRS_Compress(const String & message) ;
+String APRS_Expand(const String & message) ;
+
+
 
 // LoRa support global parameters
 extern bool LoraPrs_Service_flag  ;
@@ -111,6 +120,10 @@ extern Stream * aSerial;
 extern volatile byte EncapType ;     // 0=LoRa   1=APRS 
 extern volatile byte PayloadStyle ;
 extern volatile byte RepeaterOperation ;
+extern volatile byte LocationCompression ;
+extern volatile uint8_t AgileBeaconing ;
+extern long aprsBeaconPeriodmSecs  ;
+
 
 
 extern char slat[9]; 

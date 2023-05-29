@@ -3,38 +3,30 @@
 #include "Master_Config.h"
 #include "hw_def.h"
 
-bool HW_Set_SARIMESH(void){
-    debugA("Running HW_Set_SARIMESH....\r"); 
-    hw_arch = 1 ;    // HW SARIMESH
+bool HW_Set_Defaults(void){
+    debugA("Running HW_Set_Defaults....\r");   // defaults will be defined in the configuration file Master_Config.h
+    hw_arch = 1 ;    // 1=HW SARIMESH
     i2c_sda = O_SDA;
     i2c_scl = O_SCL;
-    spi_sck = SCK ;
-    spi_miso = MISO ;
-    spi_mosi = MOSI ;
+    spi_sck = L_SCK ;
+    spi_miso = L_MISO ;
+    spi_mosi = L_MOSI ;
     red_led = RED_LED;
     green_led = GREEN_LED;
     fp_button = BTN_PIN;
     oled_addr = O_ADDR;
-#ifdef O_RST     
     oled_rst = O_RST;
-#else
-    oled_rst = 0;
-#endif    
     oled_orient = O_FLIPSCREEN ;
-    
     lora_cs = L_SS;
     lora_rst = L_RST;
     lora_dio = L_DI0;
     lora_busy = L_BUSY;
-
     gps_rx = GPS_RX;
     gps_tx = GPS_TX;
-
-
     reboot_pin = REBOOT;  // 0 to disable
     buzzer_pin = BUZZER;  // 0 to disable 
 
-    powerchip = false ;
+    powerchip = POWERCHIP ;
     debugA("Done\r"); 
     return (true);
 }

@@ -87,7 +87,7 @@ volatile bool has_DS3231  ;             // autodiscovery
 volatile bool has_DS3231_eeprom ;       // autodiscovery
 volatile bool has_FM24W256;             // autodiscovery
 volatile bool has_SSD1306 ;             // autodiscovery
-bool has_ST77XX = true;
+bool has_ST77XX = false ;
 volatile bool has_GPS ;                 // autodiscovery
 volatile int rtxFlag = 0;               // 0 = idle 1=rx 2=tx flag to indicate lora RTX mode
 volatile bool interuptFlag = false ;                // an interrupt has been raised by lora HW
@@ -97,7 +97,7 @@ bool Native_Service_flag = true ;
 bool LoraPrs_Service_flag = true ;
 volatile bool LoRa_initialized ;        // this is an atomic variable
 bool Native_Service_initialized = false;
-volatile bool APRS_Service_initialized ;
+volatile bool APRS_Service_initialized = false ;
 int volatile gps_initialized = 0 ;   // 1--> GPS discovery and initialization passed
 volatile bool i2c_initialized = false;
 int wifi_unavailable = 1 ;
@@ -107,7 +107,73 @@ volatile bool LDH_RX_Lock = false ;          // signal that LoRa RTX is in RX_Lo
 volatile byte LoraSync ;
 volatile bool enableInterrupt = true;               // disable interrupt when it's not needed
 int volatile gps_fix_available = 0 ;   // 1--> a GPS fix is available from gps 
-int volatile gps_fix_static = 0 ;   // 1--> a GPS fix is statically assigned by configuration 
+int volatile gps_fix_static = 0 ;   // 1--> a GPS fix is statically assigned by configuration
+// AgileBeacon global data
+
+// AgileBeacon parameters - these values are based on mixed rural/suburban driving
+#define SB_LOW_SPEED      10    // Below this speed, assume stationary, beacon at slow rate (km/h)
+#define SB_SLOW_RATE      600   // number of seconds interval between beacons at slow rate (i.e. when stopped)
+#define SB_HIGH_SPEED     80    // Above this speed beacon at fast rate (km/h)
+#define SB_FAST_RATE      20    // Fast beacon interval (sec)
+#define SB_TURN_MIN_ANGLE 20    // If turn is greater than this angle then beacon (subject to speed) (degrees)
+#define SB_TURN_SLOPE     180   // This number, divided by speed, is added to SB_TURN_MIN_ANGLE to calculate at-speed turn beaconing
+#define SB_TURN_TIME      30    // Minimum beacon interval during turn
+
+long volatile lastBeaconMs = 0 ;  // last beacon time in msecs beacon was sent 
+double volatile last_GPS_BLat = 0.0 ;
+double volatile last_GPS_BLon = 0.0 ;
+double volatile last_GPS_BCourse = 0.0 ;
+double volatile last_GPS_BSpeed = 0.0 ;
+double volatile last_GPS_BAltitude = 0.0 ;
+
+
+
+/* 
+ * This data from  https://gist.github.com/m5mat/3a87b00ac553dc95f41467f80911c0d1
+ *
+ * Alternative suggested parameters. These need testing.
+ *
+ * Motorway/Highway driving
+ *   SB_LOW_SPEED      10   // below 10km/h is stopped
+ *   SB_SLOW_RATE      900  // if stopped, beacon every 15 minutes
+ *   SB_HIGH_SPEED     120  // high-speed is 120km/h
+ *   SB_FAST_RATE      60   // don't beacon faster than once per minute 
+ *   SB_TURN_MIN_ANGLE 28   
+ *   SB_TURN_SLOPE     26
+ *   SB_TURN_TIME      30
+ *   
+ * Cycling (http://softsolder.com/2010/08/24/aprs-smartbeaconing-parameters-for-bicycling/)
+ * Note that the blog post uses mph, I've used the same values even though I use km/h
+ *   SB_LOW_SPEED      3   // below 3km/h is stopped
+ *   SB_SLOW_RATE      600 // if stopped, beacon every 10 minutes
+ *   SB_HIGH_SPEED     24  // high-speed is 24km/h
+ *   SB_FAST_RATE      90  // don't beacon faster than once per minute and a half 
+ *   SB_TURN_MIN_ANGLE 15   
+ *   SB_TURN_SLOPE     24
+ *   SB_TURN_TIME      15
+ *
+ * Walking (https://groups.yahoo.com/neo/groups/APRS/conversations/topics/7383)
+ *   SB_LOW_SPEED      2
+ *   SB_SLOW_RATE      120
+ *   SB_HIGH_SPEED     10
+ *   SB_FAST_RATE      60
+ *   SB_TURN_MIN_ANGLE 30   
+ *   SB_TURN_SLOPE     24
+ *   SB_TURN_TIME      30
+ *
+ * Sailing (although note that you'll need to be within range of a digipeater/iGate!)
+ * These are based on a speed over ground of aroung 4-5kts
+ *   SB_LOW_SPEED      2
+ *   SB_SLOW_RATE      180
+ *   SB_HIGH_SPEED     15
+ *   SB_FAST_RATE      90
+ *   SB_TURN_MIN_ANGLE 45 // Note that in rough waters/large swell this should be increased   
+ *   SB_TURN_SLOPE     25
+ *   SB_TURN_TIME      15
+ */
+
+
+
 volatile bool aprsis_available ; 
 void AprsMonitor(void) ;
 
@@ -127,7 +193,7 @@ bool syslog_initialized = false ;
 bool volatile syslog_available = false ;
 
 
-bool HW_Set_SARIMESH(void);
+bool HW_Set_Defaults(void);
 void show_HW_Device_Config(void);
 void show_HW_Device_Config_Serial(void);
 
@@ -158,7 +224,8 @@ Timezone Italy;
 Timezone UTC;
 Timezone *defaultTZ = &UTC;
 String ntpServer = "ntp1.inrim.it";
-uint32_t last_aux_time;                   // to implement one second events
+uint32_t last_aux_time = 0;                   // to implement one second events
+String GPS_TimeDate = "" ;
 char RTCdatestring[20];
 long gmtOffset_sec = 3600;
 int daylightOffset_sec = 3600;
@@ -219,7 +286,11 @@ String BCN_LoRa_Vector ;
 bool BeaconUnixTime ;  
 bool BeaconFreq ;   
 bool BeaconPower ;   
-bool BeaconWorkConditions ; 
+bool BeaconWorkConditions ;
+uint8_t APRS_MsgSN =0;
+String APRS_BlkTag = "" ;
+String APRS_WCtag = "" ;
+
 uint16_t BCN_SeqNbr =0;
 uint8_t BCN_MsgSN =0;
 uint8_t BCN_status =0;  // 0=idle  1=TX  2=RX
@@ -236,6 +307,11 @@ bool requirePeriodicShortBeacon ;
 volatile byte EncapType ;     // 0=LoRa   1=APRS 
 volatile byte PayloadStyle ;
 volatile byte RepeaterOperation ;
+volatile byte LocationCompression ;
+volatile byte BlackList ;
+
+volatile uint8_t AgileBeaconing ;
+
 #include "loraprs_config.h"
 #include "loraprs_service.h"
 LoraPrs::Config cfg;              // this global structure will keep all the relevant data related to the LORA_APRS application
@@ -250,6 +326,7 @@ volatile uint32_t Kiss_tx_packets = 0 ;
 volatile uint32_t AprsIS_dropped_packets = 0;
 volatile uint32_t AprsIS_relayed_packets = 0;
 uint32_t aprsShortBeaconPeriodSeconds = 30 ;
+long aprsBeaconPeriodmSecs = 0 ;
 
 // GPS Related data
 uint32_t GPSBaud = 9600;
@@ -264,7 +341,7 @@ String lat_now = "NA"; // present GPS location in String format
 String lon_now = "NA";  
 char slat[9];    // present GPS location in APRS formats char arrays
 char slon[10];   
-float homelat , homelon ;   // aux data 
+double homelat , homelon , homecourse, homespeed, homealt;   // aux data 
 
 
 // Display related data

@@ -12,7 +12,7 @@
  working_conditions: 2 bytes (uint16_t) : <BW:4bits> <SF:4bits><CR:4bits><preamble:4bts>
 
  total_length= 22 bytes
- on_air_time at worst conditions: 25 secs
+ on_air_time at worst conditions: 25 secs  at lowest BW and highest SF/CR
 
 
 Reception report struct

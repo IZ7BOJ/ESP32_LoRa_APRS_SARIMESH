@@ -7,8 +7,7 @@ void initializeLoraPrsConfig() {
    LastFunction = __func__ ;  
    // this function will populate the global cfg structure that keeps all the relavant data for the LORA_APRS application, copied from the GUI interface  
    // this structure does not contain features related to the actual Lora HW in use
-   debugA("initializeLoraPrsConfig:  ESP_Config.LoraFreq=%s ESP_Config.LoraBw=%s  --> cfg.LoraFreq=%f \r",ESP_Config.LoraFreq.c_str(), ESP_Config.LoraBw.c_str(),cfg.LoraFreq);
-   cfg.LoraFreq = ESP_Config.LoraFreq.toFloat() * (1.0 + (float)(ESP_Config.LoraFreqCorr) /1000000.0) ; 
+   cfg.LoraFreq = ESP_Config.LoraFreq.toFloat() * (1.0 + (float)(ESP_Config.LoraFreqCorr) /10000000.0) ; 
    cfg.LoraBw = ESP_Config.LoraBw.toFloat();  
    cfg.LoraSf = ESP_Config.LoraSf;
    cfg.LoraCodingRate = ESP_Config.LoraCodingRate;
@@ -26,6 +25,7 @@ void initializeLoraPrsConfig() {
    // the RawBeacon message will be patched in realtime with present GPS coordinaates
    // ex. tracker cfg.AprsRawBeacon = "I8FUC-7>APZMDM,WIDE1-1:!GPS_LAT/GPS_LON#LoRa,15.6/SF9";  
    // ex. iGate cfg.AprsRawBeacon = "IQ8SO-10>APZMDM,WIDE1-1:!GPS_LAT/GPS_LON#iGate-LoRa, 15.6/SF9 ";
+   debugA("initializeLoraPrsConfig:  ESP_Config.LoraFreq=%s ESP_Config.LoraBw=%s  --> cfg.LoraFreq=%f \r",ESP_Config.LoraFreq.c_str(), ESP_Config.LoraBw.c_str(),cfg.LoraFreq);
 
    if(iGate_Mode){  // iGate mode
       cfg.AprsRawBeacon = textToBeaconProto(ESP_Config.AprsRawBeaconIGATE);
@@ -81,7 +81,7 @@ void AprsMonitor(void){
 // manages LoRa APRS service startup and loop in a single main loop function to sync with other processes...
 bool loop_Lora_aprs() {
    LastFunction = __func__ ;
-   if(! LoraPrs_Service_flag ) return (false) ;   // APRS apps are unavailable or still under initialization... just return...
+   if(! LoraPrs_Service_flag )   return (false) ;   // APRS apps are unavailable or still under initialization... just return...
          
    if(APRS_Service_initialized) {   // service is correctly initialized.. just do loop component of the service
       loraPrsService.aprs_loop();
@@ -195,7 +195,7 @@ void sendUdpMsg(char * Msg) {  //data will be sent to the statistics server
 // create log messages with a format compatible with direwolf; allows to use geolocation with sarimesh tools
 // also creates and write a record o local FRAM log
 
-bool send_log_msg(String textPayload , String signalReport, String my_spot){   // sends spots to aour private server via UDP
+bool send_log_msg(String textPayload , String signalReport, String my_spot){   // sends spots to our private server via UDP
    LastFunction = __func__ ;
    char Msg[1024]; char Msg1[512];
    time_t ora = ezt::now();
@@ -217,6 +217,9 @@ bool send_log_msg(String textPayload , String signalReport, String my_spot){   /
    message = message + Msg + "," ;        // ex. 0,1628957071,2021-08-14T18:04:31Z,
    // debugA("Setup timezone Italy time: " + Italy.dateTime("l, d/n/Y H:i:s.v T\r"));
    // sample payload strings:  I8FUC-7>APLS01,WIDE1-1:!4038.71N/01424.58E#LoRa,31.25/SF7 (I8FUC-7 Beacon  57.19) (IQ8SO-10 -90.00 3.25 0  77.22)
+
+   String newDecMessage = APRS_Expand (textPayload); 
+   textPayload = newDecMessage  ;
 
    int callIndex = textPayload.indexOf('>');
    int infoIndex = textPayload.indexOf(':');
@@ -255,16 +258,17 @@ bool send_log_msg(String textPayload , String signalReport, String my_spot){   /
       // extract first and last reception reports from incoming packet if LoRa packet
       int first_nodeIndex = textPayload.indexOf('(');
       int first_node_endIndex = textPayload.indexOf(')');
-      // first_node_rep = textPayload.substring(first_nodeIndex +1 , first_node_endIndex);
-      first_node_rep = textPayload.substring(first_nodeIndex +1 , first_node_endIndex - 1);  // by MF 20220130
+      first_node_rep = textPayload.substring(first_nodeIndex +1 , first_node_endIndex);   // 20230507
+      //first_node_rep = textPayload.substring(first_nodeIndex +1 , first_node_endIndex - 1);  // by MF 20220130
       int last_nodeIndex = textPayload.lastIndexOf('(');
       int last_node_endIndex = textPayload.lastIndexOf(')');
       if( last_nodeIndex != -1){
          last_node_rep = textPayload.substring(last_nodeIndex +1 , last_node_endIndex);
          int last_node_nameIndex = last_node_rep.indexOf(' ');
-         DutyCycleNow = last_node_rep.substring(0,last_node_nameIndex);
+//         DutyCycleNow = last_node_rep.substring(0,last_node_nameIndex);
+         last_node = last_node_rep.substring(0,last_node_nameIndex);
          int nodeName_last_node_nameIndex = last_node_rep.indexOf(' ', last_node_nameIndex +1);
-         last_node = last_node_rep.substring(last_node_nameIndex + 1 , nodeName_last_node_nameIndex); 
+//         last_node = last_node_rep.substring(last_node_nameIndex + 1 , nodeName_last_node_nameIndex); 
          String thisnode = String(" ") + last_node + String(" ") ;
          if( currNodeList.indexOf(thisnode) == -1 ){
             currNodeList = currNodeList + last_node + String(" ") ;
@@ -312,15 +316,20 @@ bool send_log_msg(String textPayload , String signalReport, String my_spot){   /
    message = message + sender_call + "," + sender_call + ",,,," + sender_call + ",/#," + String( mylat_norm,7) + "," + String(mylon_norm,7) + ",,,,,,,,,," + com + signalReport + " CRC_err_APRS=" + String(CRC_errored_packets_APRS) ;
    // set display content and flag display event and sound buzzer 
    int DispIndex = first_node_rep.indexOf(' ');
-   ui3_payload = first_node_rep.substring(DispIndex +1);
-   ui4_payload = first_node_rep.substring(DispIndex +1) ; 
-   if((first_node_rep != last_node_rep) || ( first_node_rep.indexOf("FromInt") > 0 )){
+   ui3_payload = "origin " + first_node_rep.substring(DispIndex +1) ;   // 20230507
+   //  ui4_payload = first_node_rep.substring(DispIndex +1) ;    // 20230507
+//   if((first_node_rep != last_node_rep) || ( first_node_rep.indexOf("FromInt") > 0 )){
+   if((first_node_rep != last_node) || ( first_node_rep.indexOf("FromInt") > 0 )){
+
       DispIndex = last_node_rep.indexOf(' ');
-      ui5_payload = last_node_rep.substring(DispIndex +1)  ;
+      ui4_payload = last_node + " " + last_node_rep.substring(DispIndex +1)  ;  // 20230507
+      ui5_payload = last_node + " " + last_node_rep.substring(DispIndex +1)  ;
       //   ui5_payload = last_node_rep ;
       }
    else {
-      ui5_payload = "---------------" ;        
+      ui5_payload = "---------------" ;     
+      ui4_payload = "direct" ;     
+
       };
    display_event = 1 ;
    soundBuzzer();

@@ -2,7 +2,7 @@
 
 #include "PortExpander8574_Support_Functions.h"
 
-#ifdef PCF8574_MOD
+// #ifdef PCF8574_MOD
 
 void hard_reboot(void) {
    debugA("hard_reboot: ===> Rebooting...");
@@ -33,9 +33,15 @@ void check_button(){
       else {   //  https://microcontrollerslab.com/adc-esp32-measuring-voltage-example/
          int ADC_VALUE = 0;
          ADC_VALUE = analogRead(fp_button);
-         // if(PE_debug) debugA("ADC VALUE = "); debugA(ADC_VALUE);
-         if(ADC_VALUE > 2048 ) port_data = HIGH ;
-      };
+         // if(PE_debug) 
+//       Serial.printf("================>   ADC VALUE = %d \r\n", ADC_VALUE);
+         if( (CPU_TYPE != "TTGO") && (CPU_TYPE != "HELTEC") ) {
+            if(ADC_VALUE > 2048 ) port_data = HIGH ;
+            }
+         else{   
+            if(ADC_VALUE < 2048 ) port_data = HIGH ;  // TTGO has reversed polariry for the button...
+            };
+         };
       
       if (port_data == HIGH){  // process button pressed
          if(wait_default_config) {  // asserted only during the dedicated time window just at the end of setup...
@@ -366,4 +372,4 @@ void green_red_flash(){
    return ;  
 }
 
-#endif       // PCF8574_MOD
+//#endif       // PCF8574_MOD
